@@ -77,11 +77,11 @@ router.get('/:year_month', async (req, res) => {
     
     // 입주율 계산
     const occupancyResult = await query(`
-      SELECT 
+      SELECT
         COUNT(*) FILTER (WHERE status = '입주') as occupied,
-        COUNT(*) FILTER (WHERE room_type NOT IN ('회의실', 'POST BOX')) as total
+        COUNT(*) as total
       FROM rooms
-      WHERE room_type NOT IN ('회의실', 'POST BOX')
+      WHERE room_type NOT IN ('회의실', '자유석', 'POST BOX')
     `);
     
     // 신규 입주
@@ -190,11 +190,11 @@ router.post('/:year_month', async (req, res) => {
     `, [year_month]);
     
     const occupancyResult = await query(`
-      SELECT 
+      SELECT
         COUNT(*) FILTER (WHERE status = '입주') as occupied,
-        COUNT(*) FILTER (WHERE room_type NOT IN ('회의실', 'POST BOX')) as total
+        COUNT(*) as total
       FROM rooms
-      WHERE room_type NOT IN ('회의실', 'POST BOX')
+      WHERE room_type NOT IN ('회의실', '자유석', 'POST BOX')
     `);
     
     const totalIncome = parseInt(incomeResult.rows[0]?.total || 0);

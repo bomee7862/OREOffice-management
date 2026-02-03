@@ -36,8 +36,9 @@ export const contractsApi = {
   terminate: (id: number, data?: { termination_type?: string; termination_reason?: string }) => 
     api.post(`/contracts/${id}/terminate`, data || {}),
   getExpiring: (days?: number) => api.get('/contracts/expiring/soon', { params: { days } }),
-  updateCard: (id: number, data: { card_x?: number; card_y?: number; card_width?: number; card_height?: number }) => 
+  updateCard: (id: number, data: { card_x?: number; card_y?: number; card_width?: number; card_height?: number }) =>
     api.patch(`/contracts/${id}/card`, data),
+  syncDeposits: () => api.post('/contracts/sync-deposits'),
 };
 
 // 거래 API
@@ -55,6 +56,20 @@ export const transactionsApi = {
     api.patch(`/transactions/${id}/tax-invoice`, data),
   // 상세 수정 (입금확인내역 수정)
   updateDetails: (id: number, data: any) => api.patch(`/transactions/${id}/details`, data),
+  // 보증금 관련 API
+  getDeposits: (params?: { year_month?: string; status?: string }) => 
+    api.get('/transactions/deposits/list', { params }),
+  getPendingConversions: (year_month: string) => 
+    api.get('/transactions/deposits/pending-conversion', { params: { year_month } }),
+  confirmDeposit: (id: number, data: {
+    payment_date: string;
+    payment_method?: string;
+    issue_tax_invoice?: boolean;
+    tax_invoice_date?: string;
+    tax_invoice_number?: string;
+  }) => api.post(`/transactions/${id}/confirm-deposit`, data),
+  convertToRent: (id: number, data: { conversion_date?: string }) => 
+    api.post(`/transactions/${id}/convert-to-rent`, data),
 };
 
 // 청구 API
@@ -64,10 +79,11 @@ export const billingsApi = {
     api.post('/billings/generate', { year_month, due_day }),
   createSingle: (room_id: number, year_month: string) => 
     api.post('/billings/create-single', { room_id, year_month }),
-  confirm: (id: number, data: { payment_date?: string; payment_method?: string; notes?: string }) => 
+  confirm: (id: number, data: { payment_date?: string; payment_method?: string; payment_amount?: number; notes?: string }) => 
     api.post(`/billings/${id}/confirm`, data),
   confirmBulk: (data: { billing_ids: number[]; payment_date?: string; payment_method?: string }) => 
     api.post('/billings/confirm-bulk', data),
+  cancelPayment: (id: number) => api.post(`/billings/${id}/cancel-payment`),
   updateStatus: (id: number, data: { status?: string; payment_date?: string; notes?: string }) => 
     api.patch(`/billings/${id}/status`, data),
   updateTaxInvoice: (id: number, data: { issued: boolean; issue_date?: string; invoice_number?: string }) => 

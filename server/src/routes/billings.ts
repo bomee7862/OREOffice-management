@@ -246,7 +246,7 @@ router.post('/create-single', async (req, res) => {
 router.post('/:id/confirm', async (req, res) => {
   try {
     const { id } = req.params;
-    const { payment_date, payment_method, notes } = req.body;
+    const { payment_date, payment_method, payment_amount, notes } = req.body;
     
     // 청구 정보 조회
     const billing = await query(`
@@ -267,6 +267,19 @@ router.post('/:id/confirm', async (req, res) => {
       return res.status(400).json({ error: '이미 입금 확인된 청구입니다.' });
     }
     
+    // 실제 납부액 (지정되지 않으면 청구액 사용)
+    const actualAmount = payment_amount !== undefined ? payment_amount : bill.amount;
+    
+    // VAT 계산 (납부액 기준)
+    const actualVat = Math.round(actualAmount - actualAmount / 1.1);
+    
+    // 차액 계산
+    const difference = actualAmount - bill.amount;
+    let description = `${bill.room_number}호 ${bill.company_name} ${bill.year_month} ${bill.billing_type}`;
+    if (difference !== 0) {
+      description += ` (청구액 대비 ${difference > 0 ? '+' : ''}${difference.toLocaleString()}원)`;
+    }
+    
     // 거래 생성
     const transaction = await query(`
       INSERT INTO transactions 
@@ -281,29 +294,32 @@ router.post('/:id/confirm', async (req, res) => {
       bill.id,
       '입금',
       bill.billing_type,
-      bill.amount,
-      bill.vat_amount,
+      actualAmount,
+      actualVat,
       payment_date || new Date().toISOString().split('T')[0],
       '완료',
-      `${bill.room_number}호 ${bill.company_name} ${bill.year_month} ${bill.billing_type}`,
+      description,
       payment_method || '계좌이체',
       notes
     ]);
     
-    // 청구 상태 업데이트 (notes도 저장)
+    // 청구 상태 업데이트 (실제 납부액, notes도 저장)
     await query(`
-      UPDATE monthly_billings 
-      SET status = '완료', 
-          payment_date = $1, 
+      UPDATE monthly_billings
+      SET status = '완료',
+          payment_date = $1,
           transaction_id = $2,
-          notes = $3,
+          amount = $3,
+          vat_amount = $4,
+          notes = $5,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $4
-    `, [payment_date || new Date().toISOString().split('T')[0], transaction.rows[0].id, notes || null, id]);
+      WHERE id = $6
+    `, [payment_date || new Date().toISOString().split('T')[0], transaction.rows[0].id, actualAmount, actualVat, notes || null, id]);
     
     res.json({
       message: '입금이 확인되었습니다.',
-      transaction: transaction.rows[0]
+      transaction: transaction.rows[0],
+      difference: difference
     });
   } catch (error) {
     console.error('입금 확인 오류:', error);
@@ -457,6 +473,56 @@ router.patch('/:id/status', async (req, res) => {
   } catch (error) {
     console.error('청구 상태 변경 오류:', error);
     res.status(500).json({ error: '청구 상태 변경에 실패했습니다.' });
+  }
+});
+
+// 입금 취소 (완료 → 대기로 되돌림)
+router.post('/:id/cancel-payment', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // 청구 정보 조회
+    const billing = await query(`
+      SELECT mb.*, t.company_name, r.room_number
+      FROM monthly_billings mb
+      LEFT JOIN tenants t ON mb.tenant_id = t.id
+      LEFT JOIN rooms r ON mb.room_id = r.id
+      WHERE mb.id = $1
+    `, [id]);
+    
+    if (billing.rows.length === 0) {
+      return res.status(404).json({ error: '청구를 찾을 수 없습니다.' });
+    }
+    
+    const bill = billing.rows[0];
+    
+    if (bill.status !== '완료') {
+      return res.status(400).json({ error: '입금 완료 상태가 아닙니다.' });
+    }
+    
+    // 연결된 거래 삭제
+    if (bill.transaction_id) {
+      await query('DELETE FROM transactions WHERE id = $1', [bill.transaction_id]);
+    }
+    
+    // 청구 상태를 대기로 되돌림
+    const result = await query(`
+      UPDATE monthly_billings 
+      SET status = '대기', 
+          payment_date = NULL, 
+          transaction_id = NULL,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `, [id]);
+    
+    res.json({
+      message: `${bill.room_number}호 ${bill.company_name} 입금이 취소되었습니다.`,
+      billing: result.rows[0]
+    });
+  } catch (error) {
+    console.error('입금 취소 오류:', error);
+    res.status(500).json({ error: '입금 취소에 실패했습니다.' });
   }
 });
 

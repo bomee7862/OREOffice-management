@@ -325,4 +325,201 @@ router.patch('/:id/details', async (req, res) => {
   }
 });
 
+// 보증금 입금 확인 (세금계산서 발행 포함)
+router.post('/:id/confirm-deposit', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      payment_date, 
+      payment_method,
+      issue_tax_invoice,
+      tax_invoice_date,
+      tax_invoice_number
+    } = req.body;
+    
+    // 보증금 거래 확인
+    const depositCheck = await query(`
+      SELECT tr.*, t.company_name, r.room_number 
+      FROM transactions tr
+      LEFT JOIN tenants t ON tr.tenant_id = t.id
+      LEFT JOIN rooms r ON tr.room_id = r.id
+      WHERE tr.id = $1 AND tr.category = '보증금입금'
+    `, [id]);
+    
+    if (depositCheck.rows.length === 0) {
+      return res.status(404).json({ error: '보증금 거래를 찾을 수 없습니다.' });
+    }
+    
+    // 보증금 입금 확인 처리
+    const result = await query(`
+      UPDATE transactions 
+      SET status = '완료',
+          transaction_date = $1,
+          payment_method = $2,
+          tax_invoice_issued = $3,
+          tax_invoice_date = $4,
+          tax_invoice_number = $5,
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $6
+      RETURNING *
+    `, [
+      payment_date,
+      payment_method || '계좌이체',
+      issue_tax_invoice || false,
+      issue_tax_invoice ? tax_invoice_date : null,
+      issue_tax_invoice ? tax_invoice_number : null,
+      id
+    ]);
+    
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('보증금 입금 확인 오류:', error);
+    res.status(500).json({ error: '보증금 입금 확인에 실패했습니다.' });
+  }
+});
+
+// 보증금 → 사용료 전환
+router.post('/:id/convert-to-rent', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { conversion_date } = req.body;
+    
+    // 보증금 거래 조회 (세금계산서 정보 포함)
+    const depositInfo = await query(`
+      SELECT tr.*, 
+        t.company_name, 
+        r.room_number,
+        c.end_date as contract_end_date,
+        c.monthly_rent_vat
+      FROM transactions tr
+      LEFT JOIN tenants t ON tr.tenant_id = t.id
+      LEFT JOIN rooms r ON tr.room_id = r.id
+      LEFT JOIN contracts c ON tr.contract_id = c.id
+      WHERE tr.id = $1 AND tr.category = '보증금입금'
+    `, [id]);
+    
+    if (depositInfo.rows.length === 0) {
+      return res.status(404).json({ error: '보증금 거래를 찾을 수 없습니다.' });
+    }
+    
+    const deposit = depositInfo.rows[0];
+    
+    if (deposit.status !== '완료') {
+      return res.status(400).json({ error: '입금 확인이 완료되지 않은 보증금입니다.' });
+    }
+    
+    // 사용료전환 거래 생성
+    const conversionResult = await query(`
+      INSERT INTO transactions (
+        type, category, amount, description, transaction_date,
+        room_id, tenant_id, contract_id, status,
+        tax_invoice_issued, tax_invoice_date, tax_invoice_number
+      )
+      VALUES ('입금', '사용료전환', $1, $2, $3, $4, $5, $6, '완료', $7, $8, $9)
+      RETURNING *
+    `, [
+      deposit.amount,
+      `${deposit.room_number}호 ${deposit.company_name} 보증금→사용료 전환`,
+      conversion_date || deposit.contract_end_date,
+      deposit.room_id,
+      deposit.tenant_id,
+      deposit.contract_id,
+      deposit.tax_invoice_issued,  // 기존 세금계산서 정보 유지
+      deposit.tax_invoice_date,
+      deposit.tax_invoice_number
+    ]);
+    
+    // 기존 보증금 거래 상태를 '전환완료'로 변경
+    await query(`
+      UPDATE transactions 
+      SET status = '전환완료',
+          notes = COALESCE(notes, '') || ' [사용료 전환: ' || TO_CHAR(CURRENT_DATE, 'YYYY-MM-DD') || ']',
+          updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+    `, [id]);
+    
+    res.json({
+      message: '보증금이 사용료로 전환되었습니다.',
+      conversion: conversionResult.rows[0],
+      original_deposit: deposit
+    });
+  } catch (error) {
+    console.error('보증금 사용료 전환 오류:', error);
+    res.status(500).json({ error: '보증금 사용료 전환에 실패했습니다.' });
+  }
+});
+
+// 보증금 목록 조회 (예수금 관리용)
+router.get('/deposits/list', async (req, res) => {
+  try {
+    const { year_month, status } = req.query;
+    
+    let sql = `
+      SELECT tr.*, 
+        t.company_name,
+        r.room_number,
+        c.start_date as contract_start_date,
+        c.end_date as contract_end_date,
+        c.monthly_rent_vat
+      FROM transactions tr
+      LEFT JOIN tenants t ON tr.tenant_id = t.id
+      LEFT JOIN rooms r ON tr.room_id = r.id
+      LEFT JOIN contracts c ON tr.contract_id = c.id
+      WHERE tr.category = '보증금입금'
+    `;
+    
+    const params: any[] = [];
+    let paramIndex = 1;
+    
+    if (status) {
+      sql += ` AND tr.status = $${paramIndex++}`;
+      params.push(status);
+    }
+    
+    if (year_month) {
+      sql += ` AND TO_CHAR(tr.transaction_date, 'YYYY-MM') = $${paramIndex++}`;
+      params.push(year_month);
+    }
+    
+    sql += ' ORDER BY tr.transaction_date DESC, tr.created_at DESC';
+    
+    const result = await query(sql, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('보증금 목록 조회 오류:', error);
+    res.status(500).json({ error: '보증금 목록 조회에 실패했습니다.' });
+  }
+});
+
+// 전환 대기 보증금 조회 (계약 종료월 기준)
+router.get('/deposits/pending-conversion', async (req, res) => {
+  try {
+    const { year_month } = req.query;
+    
+    const result = await query(`
+      SELECT tr.*, 
+        t.company_name,
+        r.room_number,
+        c.start_date as contract_start_date,
+        c.end_date as contract_end_date,
+        c.monthly_rent_vat,
+        c.payment_day
+      FROM transactions tr
+      LEFT JOIN tenants t ON tr.tenant_id = t.id
+      LEFT JOIN rooms r ON tr.room_id = r.id
+      LEFT JOIN contracts c ON tr.contract_id = c.id
+      WHERE tr.category = '보증금입금'
+        AND tr.status = '완료'
+        AND c.is_active = true
+        AND TO_CHAR(c.end_date, 'YYYY-MM') = $1
+      ORDER BY c.end_date ASC
+    `, [year_month]);
+    
+    res.json(result.rows);
+  } catch (error) {
+    console.error('전환 대기 보증금 조회 오류:', error);
+    res.status(500).json({ error: '전환 대기 보증금 조회에 실패했습니다.' });
+  }
+});
+
 export default router;

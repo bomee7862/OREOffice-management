@@ -38,7 +38,7 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.listen(PORT, () => {
-  console.log(`🚀 서버가 http://localhost:${PORT} 에서 실행중입니다.`);
+app.listen(PORT, '127.0.0.1', () => {
+  console.log(`🚀 서버가 http://127.0.0.1:${PORT} 에서 실행중입니다.`);
 });
 

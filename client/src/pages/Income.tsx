@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import { billingsApi, transactionsApi, tenantsApi, roomsApi } from '../api';
+import { billingsApi, transactionsApi, tenantsApi, roomsApi, contractsApi } from '../api';
 import { Billing, Tenant, Room, Transaction } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { 
   Check, ChevronLeft, ChevronRight, Plus, RefreshCw, 
   Building2, CreditCard, AlertCircle, CheckCircle2, FileText, 
-  CheckSquare, Square, X, AlertTriangle, Coffee, Mailbox, Wallet
+  CheckSquare, Square, X, AlertTriangle, Coffee, Mailbox, Wallet,
+  Landmark, ArrowRightLeft
 } from 'lucide-react';
 
 export default function Income() {
@@ -38,8 +39,10 @@ export default function Income() {
   const [confirmForm, setConfirmForm] = useState({
     payment_date: format(new Date(), 'yyyy-MM-dd'),
     payment_method: '계좌이체',
+    payment_amount: 0,
     notes: ''
   });
+  const [paymentMode, setPaymentMode] = useState<'vat_included' | 'vat_excluded' | 'custom'>('vat_included');
 
   const [taxInvoiceForm, setTaxInvoiceForm] = useState({
     issue_date: format(new Date(), 'yyyy-MM-dd'),
@@ -70,6 +73,29 @@ export default function Income() {
     invoice_number: ''
   });
 
+  // 보증금(예수금) 관련 상태
+  const [deposits, setDeposits] = useState<Transaction[]>([]);
+  const [pendingConversions, setPendingConversions] = useState<Transaction[]>([]);
+  const [confirmedDeposits, setConfirmedDeposits] = useState<Transaction[]>([]); // 해당월 입금 확인된 보증금
+  const [allActiveDeposits, setAllActiveDeposits] = useState<Transaction[]>([]); // 전체 보유 예수금
+  const [showDepositConfirmModal, setShowDepositConfirmModal] = useState(false);
+  const [showConversionModal, setShowConversionModal] = useState(false);
+  const [selectedDeposit, setSelectedDeposit] = useState<Transaction | null>(null);
+  
+  // 수입 현황 펼치기 상태
+  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({});
+  const [depositConfirmForm, setDepositConfirmForm] = useState({
+    payment_date: format(new Date(), 'yyyy-MM-dd'),
+    payment_method: '계좌이체',
+    issue_tax_invoice: false,
+    tax_invoice_date: format(new Date(), 'yyyy-MM-dd'),
+    tax_invoice_number: ''
+  });
+  const [conversionForm, setConversionForm] = useState({
+    conversion_date: ''
+  });
+  const [syncing, setSyncing] = useState(false);
+
   const yearMonth = format(currentDate, 'yyyy-MM');
   const monthStart = format(startOfMonth(currentDate), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(currentDate), 'yyyy-MM-dd');
@@ -81,14 +107,22 @@ export default function Income() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [billingsRes, transactionsRes, specialTransactionsRes, tenantsRes, roomsRes] = await Promise.all([
+      const [billingsRes, transactionsRes, specialTransactionsRes, tenantsRes, roomsRes, depositsRes, pendingConversionsRes, confirmedDepositsRes, allDepositsRes] = await Promise.all([
         billingsApi.getAll({ year_month: yearMonth }),
         // 일반 수입 (1회성 사용 등) - transaction_date 기준
         transactionsApi.getAll({ type: '입금', start_date: monthStart, end_date: monthEnd }),
         // 비상주사용료, 위약금 - 계약 날짜 기준 필터링을 위해 전체 조회
         transactionsApi.getAll({ type: '입금', category: '비상주사용료,위약금' }),
         tenantsApi.getAll(),
-        roomsApi.getAll()
+        roomsApi.getAll(),
+        // 보증금 입금 대기 (전체 - 대기 상태는 월 상관없이 표시)
+        transactionsApi.getDeposits({ status: '대기' }),
+        // 사용료 전환 대기 (계약 종료월 기준)
+        transactionsApi.getPendingConversions(yearMonth),
+        // 해당월 입금 확인된 보증금
+        transactionsApi.getDeposits({ year_month: yearMonth, status: '완료' }),
+        // 전체 보유 예수금 (완료 상태)
+        transactionsApi.getDeposits({ status: '완료' })
       ]);
       setBillings(billingsRes.data);
       // 일반 트랜잭션과 특수 트랜잭션 병합 (중복 제거)
@@ -101,6 +135,10 @@ export default function Income() {
       setTransactions(allTransactions);
       setTenants(tenantsRes.data);
       setRooms(roomsRes.data);
+      setDeposits(depositsRes.data);
+      setPendingConversions(pendingConversionsRes.data);
+      setConfirmedDeposits(confirmedDepositsRes.data);
+      setAllActiveDeposits(allDepositsRes.data);
       setSelectedIds([]);
     } catch (error) {
       console.error('데이터 로딩 오류:', error);
@@ -115,8 +153,8 @@ export default function Income() {
   
   // 해당월에 입금 대상인 호실 (입금일까지 계약이 유효한 호실)
   const occupiedRooms = rooms.filter(room => {
-    // POST BOX, 회의실, 자유석 제외 (일반 호실만)
-    if (room.room_type === 'POST BOX' || room.room_type === '회의실' || room.room_type === '자유석') {
+    // POST BOX, 회의실 제외 (자유석은 포함)
+    if (room.room_type === 'POST BOX' || room.room_type === '회의실') {
       return false;
     }
     // 계약 정보가 있는 경우
@@ -186,10 +224,18 @@ export default function Income() {
     t.status === '완료'
   );
 
+  // 미입금 호실: 전체 입주 호실 중 입금 확인되지 않은 호실
+  const unpaidRooms = occupiedRooms.filter(room => {
+    const billing = billings.find(b => b.room_id === room.id);
+    // 청구가 없거나, 청구 상태가 '완료'가 아닌 경우
+    return !billing || billing.status !== '완료';
+  });
+
   // 요약 계산
   const pendingTotal = pendingBillings.reduce((sum, b) => sum + b.amount, 0);
   const completedBillingTotal = completedBillings.reduce((sum, b) => sum + b.amount, 0);
   const occupiedRoomsTotal = occupiedRooms.reduce((sum, r) => sum + (r.monthly_rent_vat || 0), 0);
+  const unpaidTotal = unpaidRooms.reduce((sum, r) => sum + (r.monthly_rent_vat || 0), 0);
   const postboxTotal = postboxIncome.reduce((sum, t) => sum + t.amount, 0);
   const penaltyTotal = penaltyIncome.reduce((sum, t) => sum + t.amount, 0);
   const depositConversionTotal = depositConversionIncome.reduce((sum, t) => sum + t.amount, 0);
@@ -199,14 +245,14 @@ export default function Income() {
   const totalCompleted = completedBillingTotal + postboxTotal + penaltyTotal + depositConversionTotal + oneTimeTotal + otherTotal;
 
   const handleGenerateBillings = async () => {
-    if (!confirm(`${format(currentDate, 'yyyy년 M월', { locale: ko })} 청구를 생성하시겠습니까?`)) return;
+    if (!confirm(`${format(currentDate, 'yyyy년 M월', { locale: ko })} 입금관리를 생성하시겠습니까?`)) return;
     
     try {
       const result = await billingsApi.generate(yearMonth);
-      alert(`${result.data.count}건의 청구가 생성되었습니다.`);
+      alert(`${result.data.count}건의 입금관리가 생성되었습니다.`);
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.error || '청구 생성에 실패했습니다.');
+      alert(error.response?.data?.error || '입금관리 생성에 실패했습니다.');
     }
   };
 
@@ -216,7 +262,7 @@ export default function Income() {
       await billingsApi.createSingle(roomId, yearMonth);
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.error || `${roomNumber}호 청구 생성에 실패했습니다.`);
+      alert(error.response?.data?.error || `${roomNumber}호 입금관리 생성에 실패했습니다.`);
     }
   };
 
@@ -225,7 +271,12 @@ export default function Income() {
     if (!selectedBilling) return;
     
     try {
-      await billingsApi.confirm(selectedBilling.id, confirmForm);
+      await billingsApi.confirm(selectedBilling.id, {
+        payment_date: confirmForm.payment_date,
+        payment_method: confirmForm.payment_method,
+        payment_amount: confirmForm.payment_amount,
+        notes: confirmForm.notes
+      });
       setShowConfirmModal(false);
       setSelectedBilling(null);
       resetConfirmForm();
@@ -325,6 +376,60 @@ export default function Income() {
     }
   };
 
+  // 보증금 입금 확인 모달 열기
+  const openDepositConfirmModal = (deposit: Transaction) => {
+    setSelectedDeposit(deposit);
+    setDepositConfirmForm({
+      payment_date: format(new Date(), 'yyyy-MM-dd'),
+      payment_method: '계좌이체',
+      issue_tax_invoice: false,
+      tax_invoice_date: format(new Date(), 'yyyy-MM-dd'),
+      tax_invoice_number: ''
+    });
+    setShowDepositConfirmModal(true);
+  };
+
+  // 보증금 입금 확인 처리
+  const handleDepositConfirm = async () => {
+    if (!selectedDeposit) return;
+    
+    try {
+      await transactionsApi.confirmDeposit(selectedDeposit.id, depositConfirmForm);
+      setShowDepositConfirmModal(false);
+      setSelectedDeposit(null);
+      loadData();
+      alert('보증금 입금이 확인되었습니다.');
+    } catch (error) {
+      console.error('보증금 입금 확인 오류:', error);
+      alert('보증금 입금 확인에 실패했습니다.');
+    }
+  };
+
+  // 사용료 전환 모달 열기
+  const openConversionModal = (deposit: Transaction) => {
+    setSelectedDeposit(deposit);
+    // @ts-ignore - contract_end_date는 조인된 필드
+    const endDate = deposit.contract_end_date?.split('T')[0] || format(new Date(), 'yyyy-MM-dd');
+    setConversionForm({ conversion_date: endDate });
+    setShowConversionModal(true);
+  };
+
+  // 보증금 → 사용료 전환 처리
+  const handleConversion = async () => {
+    if (!selectedDeposit) return;
+    
+    try {
+      await transactionsApi.convertToRent(selectedDeposit.id, conversionForm);
+      setShowConversionModal(false);
+      setSelectedDeposit(null);
+      loadData();
+      alert('보증금이 사용료로 전환되었습니다.');
+    } catch (error) {
+      console.error('보증금 전환 오류:', error);
+      alert('보증금 전환에 실패했습니다.');
+    }
+  };
+
   // 트랜잭션 세금계산서 발행
   const handleTransactionTaxInvoice = async () => {
     if (!selectedTransaction) return;
@@ -418,12 +523,28 @@ export default function Income() {
     }
   };
 
+  // 입금 취소 처리
+  const handleCancelPayment = async (billing: Billing) => {
+    if (!confirm(`${billing.room_number}호 ${billing.company_name}의 입금을 취소하시겠습니까?\n\n취소 시 입금 기록이 삭제되고 대기 상태로 돌아갑니다.`)) return;
+    
+    try {
+      await billingsApi.cancelPayment(billing.id);
+      loadData();
+      alert('입금이 취소되었습니다.');
+    } catch (error: any) {
+      console.error('입금 취소 오류:', error);
+      alert(error.response?.data?.error || '입금 취소에 실패했습니다.');
+    }
+  };
+
   const resetConfirmForm = () => {
     setConfirmForm({
       payment_date: format(new Date(), 'yyyy-MM-dd'),
       payment_method: '계좌이체',
+      payment_amount: 0,
       notes: ''
     });
+    setPaymentMode('vat_included');
   };
 
   const resetTaxInvoiceForm = () => {
@@ -451,6 +572,12 @@ export default function Income() {
     if (billing) {
       setSelectedBilling(billing);
       setBulkMode(false);
+      // 기본값으로 VAT 포함 금액 설정
+      setConfirmForm(prev => ({
+        ...prev,
+        payment_amount: billing.amount
+      }));
+      setPaymentMode('vat_included');
     } else {
       setBulkMode(true);
     }
@@ -528,7 +655,7 @@ export default function Income() {
             className="btn btn-secondary flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
-            청구 생성
+            입금관리
           </button>
         </div>
       </div>
@@ -678,7 +805,7 @@ export default function Income() {
                 
                 // 상태 결정
                 const getStatusInfo = () => {
-                  if (isNotGenerated) return { label: '미청구', color: 'bg-slate-100 text-slate-600', icon: '⚪' };
+                  if (isNotGenerated) return { label: '미입금', color: 'bg-slate-100 text-slate-600', icon: '⚪' };
                   if (isCompleted && billing?.tax_invoice_issued) return { label: '세금계산서', color: 'bg-purple-100 text-purple-700', icon: '📄' };
                   if (isCompleted) return { label: '완료', color: 'bg-green-100 text-green-700', icon: '✅' };
                   if (isOverdue) return { label: '연체', color: 'bg-red-100 text-red-700', icon: '🔴' };
@@ -729,7 +856,7 @@ export default function Income() {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="font-bold text-slate-900">{formatCurrency(room.monthly_rent_vat || 0)}</div>
+                        <div className="font-bold text-slate-900">{formatCurrency(billing?.amount || room.monthly_rent_vat || 0)}</div>
                       </div>
                       
                       {/* 상태 뱃지 */}
@@ -744,7 +871,7 @@ export default function Income() {
                           className="btn btn-secondary flex items-center gap-1 text-sm"
                         >
                           <Plus className="w-4 h-4" />
-                          청구 생성
+                          입금관리
                         </button>
                       )}
                       
@@ -787,6 +914,13 @@ export default function Income() {
                           >
                             ✏️
                           </button>
+                          <button
+                            onClick={() => handleCancelPayment(billing)}
+                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-500"
+                            title="입금 취소"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
                         </div>
                       )}
                     </div>
@@ -795,6 +929,30 @@ export default function Income() {
               })
           )}
         </div>
+        
+        {/* 📊 총계 비교 */}
+        {occupiedRooms.length > 0 && (
+          <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-t-2 border-amber-200">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-600">📋 이달 예상:</span>
+                <span className="text-lg font-bold text-slate-800">{formatCurrency(occupiedRoomsTotal)}</span>
+              </div>
+              <div className="h-8 w-px bg-amber-300"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-green-600">✅ 입금 확인:</span>
+                <span className="text-lg font-bold text-green-700">{formatCurrency(completedBillingTotal)}</span>
+                <span className="text-sm text-green-600">({completedBillings.length}개 호실)</span>
+              </div>
+              <div className="h-8 w-px bg-amber-300"></div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-amber-600">⏳ 미입금:</span>
+                <span className="text-lg font-bold text-amber-700">{formatCurrency(unpaidTotal)}</span>
+                <span className="text-sm text-amber-600">({unpaidRooms.length}개 호실)</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 📬 비상주 사용료 (POST BOX) */}
@@ -1042,103 +1200,110 @@ export default function Income() {
         </div>
       </div>
 
-      {/* 📈 월별 수입 요약 */}
-      <div className="card">
-        <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-slate-50 to-slate-100">
-          <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-            📈 {format(currentDate, 'M월', { locale: ko })} 수입 요약
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-3">
-            {/* 호실별 임대료 */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-                <span className="text-slate-700">호실별 임대료 (완료)</span>
-              </div>
-              <span className="font-semibold text-slate-900">{formatCurrency(completedBillingTotal)}</span>
-            </div>
-            
-            {/* 비상주 사용료 */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-violet-400"></div>
-                <span className="text-slate-700">비상주 사용료</span>
-              </div>
-              <span className="font-semibold text-slate-900">{formatCurrency(postboxTotal)}</span>
-            </div>
-            
-            {/* 위약금 */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-orange-400"></div>
-                <span className="text-slate-700">위약금 (중도종료)</span>
-              </div>
-              <span className="font-semibold text-slate-900">{formatCurrency(penaltyTotal)}</span>
-            </div>
-            
-            {/* 사용료전환 */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-teal-400"></div>
-                <span className="text-slate-700">사용료전환 (만기종료)</span>
-              </div>
-              <span className="font-semibold text-slate-900">{formatCurrency(depositConversionTotal)}</span>
-            </div>
-            
-            {/* 1회성 사용 */}
-            <div className="flex items-center justify-between py-2">
-              <div className="flex items-center gap-3">
-                <div className="w-3 h-3 rounded-full bg-cyan-400"></div>
-                <span className="text-slate-700">1회성 사용 (회의실/1day)</span>
-              </div>
-              <span className="font-semibold text-slate-900">{formatCurrency(oneTimeTotal)}</span>
-            </div>
-            
-            {/* 기타 */}
-            {otherTotal > 0 && (
-              <div className="flex items-center justify-between py-2">
-                <div className="flex items-center gap-3">
-                  <div className="w-3 h-3 rounded-full bg-slate-400"></div>
-                  <span className="text-slate-700">기타 수입</span>
-                </div>
-                <span className="font-semibold text-slate-900">{formatCurrency(otherTotal)}</span>
-              </div>
-            )}
-            
-            {/* 구분선 */}
-            <div className="border-t border-slate-200 my-2"></div>
-            
-            {/* 총 실제 수입 */}
-            <div className="flex items-center justify-between py-3 bg-green-50 -mx-6 px-6 rounded-lg">
-              <div className="flex items-center gap-3">
-                <CheckCircle2 className="w-5 h-5 text-green-600" />
-                <span className="font-bold text-green-800">💰 총 실제 수입</span>
-              </div>
-              <span className="text-xl font-bold text-green-700">{formatCurrency(totalCompleted)}</span>
-            </div>
-            
-            {/* 입금 대기 */}
-            <div className="flex items-center justify-between py-3 bg-amber-50 -mx-6 px-6 rounded-lg">
-              <div className="flex items-center gap-3">
-                <AlertCircle className="w-5 h-5 text-amber-600" />
-                <span className="font-medium text-amber-800">⏳ 입금 대기</span>
-              </div>
-              <span className="text-lg font-bold text-amber-700">{formatCurrency(pendingTotal)}</span>
-            </div>
-            
-            {/* 총 예상 */}
-            <div className="flex items-center justify-between py-3 bg-blue-50 -mx-6 px-6 rounded-lg">
-              <div className="flex items-center gap-3">
-                <CreditCard className="w-5 h-5 text-blue-600" />
-                <span className="font-medium text-blue-800">📊 이달 총 예상</span>
-              </div>
-              <span className="text-lg font-bold text-blue-700">{formatCurrency(totalExpected)}</span>
-            </div>
+      {/* 🏦 예수금(보증금) 관리 */}
+      {(deposits.length > 0 || pendingConversions.length > 0) && (
+        <div className="card">
+          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-violet-50">
+            <h3 className="font-semibold text-slate-900 flex items-center gap-2">
+              <Landmark className="w-5 h-5 text-indigo-600" />
+              🏦 예수금(보증금) 관리
+              <span className="text-sm font-normal text-indigo-600 ml-2">* 손익 미반영 (부채)</span>
+            </h3>
           </div>
+          
+          {/* 입금 대기 보증금 */}
+          {deposits.length > 0 && (
+            <div className="p-4 border-b border-slate-100">
+              <h4 className="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4" />
+                입금 대기 ({deposits.length}건)
+              </h4>
+              <div className="space-y-2">
+                {deposits.map((deposit) => (
+                  <div key={deposit.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+                        <Landmark className="w-5 h-5 text-amber-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">
+                          {deposit.room_number}호 | {deposit.company_name}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          {/* @ts-ignore */}
+                          계약시작: {deposit.contract_start_date ? format(new Date(deposit.contract_start_date), 'yy.MM.dd') : '-'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-amber-700">{formatCurrency(deposit.amount)}</span>
+                      <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
+                        🟡 대기
+                      </span>
+                      <button
+                        onClick={() => openDepositConfirmModal(deposit)}
+                        className="btn btn-primary text-sm px-3 py-1.5"
+                      >
+                        입금 확인
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 사용료 전환 대기 (계약 종료월) */}
+          {pendingConversions.length > 0 && (
+            <div className="p-4">
+              <h4 className="text-sm font-semibold text-teal-700 mb-3 flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4" />
+                사용료 전환 대기 ({pendingConversions.length}건)
+                <span className="text-xs font-normal text-teal-600">- 계약 종료월</span>
+              </h4>
+              <div className="space-y-2">
+                {pendingConversions.map((deposit) => (
+                  <div key={deposit.id} className="flex items-center justify-between p-3 bg-teal-50 rounded-xl border border-teal-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                        <ArrowRightLeft className="w-5 h-5 text-teal-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">
+                          {deposit.room_number}호 | {deposit.company_name}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          {/* @ts-ignore */}
+                          계약종료: {deposit.contract_end_date ? format(new Date(deposit.contract_end_date), 'yy.MM.dd') : '-'}
+                          {/* @ts-ignore */}
+                          {deposit.payment_day && ` | 납부일: 매월 ${deposit.payment_day}일`}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="font-bold text-teal-700">{formatCurrency(deposit.amount)}</span>
+                        {deposit.tax_invoice_issued && (
+                          <div className="text-xs text-purple-600 flex items-center gap-1 justify-end">
+                            <FileText className="w-3 h-3" />
+                            세금계산서 발행됨
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        onClick={() => openConversionModal(deposit)}
+                        className="btn text-sm px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white"
+                      >
+                        사용료 전환
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
       {/* 입금 확인 모달 */}
       {showConfirmModal && (
@@ -1154,15 +1319,102 @@ export default function Income() {
             </div>
             <div className="p-6 space-y-4">
               {!bulkMode && selectedBilling && (
-                <div className="p-4 bg-slate-50 rounded-xl">
-                  <div className="text-sm text-slate-500">청구 정보</div>
-                  <div className="font-medium text-slate-900">
-                    {selectedBilling.room_number}호 | {selectedBilling.company_name}
+                <>
+                  {/* 청구 정보 */}
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <div className="text-sm text-slate-500">📋 청구 정보</div>
+                    <div className="font-medium text-slate-900">
+                      {selectedBilling.room_number}호 | {selectedBilling.company_name}
+                    </div>
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-lg font-bold" style={{ color: '#8fb300' }}>
+                        {formatCurrency(selectedBilling.amount)}
+                      </span>
+                      <span className="text-sm text-slate-500">
+                        (VAT {formatCurrency(selectedBilling.vat_amount || Math.round(selectedBilling.amount - selectedBilling.amount / 1.1))})
+                      </span>
+                    </div>
                   </div>
-                  <div className="text-lg font-bold" style={{ color: '#8fb300' }}>
-                    {formatCurrency(selectedBilling.amount)}
+
+                  {/* 실제 납부 */}
+                  <div className="p-4 bg-green-50 rounded-xl space-y-3">
+                    <div className="text-sm font-medium text-green-800">💰 실제 납부</div>
+                    
+                    {/* 빠른 선택 버튼 */}
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMode('vat_included');
+                          setConfirmForm(prev => ({ ...prev, payment_amount: selectedBilling.amount }));
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          paymentMode === 'vat_included'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                        }`}
+                      >
+                        VAT 포함
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPaymentMode('vat_excluded');
+                          const vatExcluded = selectedBilling.amount - (selectedBilling.vat_amount || Math.round(selectedBilling.amount - selectedBilling.amount / 1.1));
+                          setConfirmForm(prev => ({ ...prev, payment_amount: vatExcluded }));
+                        }}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          paymentMode === 'vat_excluded'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                        }`}
+                      >
+                        VAT 제외
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPaymentMode('custom')}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
+                          paymentMode === 'custom'
+                            ? 'bg-green-600 text-white'
+                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                        }`}
+                      >
+                        직접 입력
+                      </button>
+                    </div>
+
+                    {/* 납부액 입력 */}
+                    <div>
+                      <label className="label text-green-800">납부액</label>
+                      <input
+                        type="number"
+                        value={confirmForm.payment_amount}
+                        onChange={(e) => {
+                          setPaymentMode('custom');
+                          setConfirmForm(prev => ({ ...prev, payment_amount: parseInt(e.target.value) || 0 }));
+                        }}
+                        onFocus={() => setPaymentMode('custom')}
+                        className="input text-lg font-bold"
+                      />
+                    </div>
+
+                    {/* 차액 표시 */}
+                    {confirmForm.payment_amount !== selectedBilling.amount && (
+                      <div className={`p-2 rounded-lg text-sm ${
+                        confirmForm.payment_amount < selectedBilling.amount 
+                          ? 'bg-amber-100 text-amber-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        💡 차액: {confirmForm.payment_amount < selectedBilling.amount ? '-' : '+'}
+                        {formatCurrency(Math.abs(confirmForm.payment_amount - selectedBilling.amount))}
+                        {confirmForm.payment_amount < selectedBilling.amount 
+                          ? ' (청구액보다 적음)' 
+                          : ' (청구액보다 많음)'}
+                      </div>
+                    )}
                   </div>
-                </div>
+                </>
               )}
 
               {bulkMode && (
@@ -1172,6 +1424,7 @@ export default function Income() {
                   <div className="text-lg font-bold text-blue-800">
                     {formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))}
                   </div>
+                  <p className="text-xs text-blue-600 mt-2">* 일괄 처리 시 청구액 그대로 입금 처리됩니다.</p>
                 </div>
               )}
 
@@ -1223,7 +1476,7 @@ export default function Income() {
                 onClick={bulkMode ? handleBulkConfirm : handleConfirm}
                 className="btn btn-primary flex-1"
               >
-                {bulkMode ? `${selectedPendingCount}건 입금 확인` : '확인'}
+                {bulkMode ? `${selectedPendingCount}건 입금 확인` : `${formatCurrency(confirmForm.payment_amount)} 입금 확인`}
               </button>
             </div>
           </div>
@@ -1683,6 +1936,189 @@ export default function Income() {
                 className="btn btn-primary flex-1"
               >
                 저장
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 보증금 입금 확인 모달 */}
+      {showDepositConfirmModal && selectedDeposit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <Landmark className="w-5 h-5 text-indigo-600" />
+                보증금 입금 확인
+              </h3>
+              <button onClick={() => setShowDepositConfirmModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-indigo-50 rounded-xl">
+                <div className="text-sm text-indigo-600">보증금 정보</div>
+                <div className="font-medium text-slate-900">
+                  {selectedDeposit.room_number}호 | {selectedDeposit.company_name}
+                </div>
+                <div className="text-xl font-bold text-indigo-700 mt-1">
+                  {formatCurrency(selectedDeposit.amount)}
+                </div>
+              </div>
+
+              <div>
+                <label className="label">입금일</label>
+                <input
+                  type="date"
+                  value={depositConfirmForm.payment_date}
+                  onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, payment_date: e.target.value }))}
+                  className="input"
+                />
+              </div>
+
+              <div>
+                <label className="label">결제 방법</label>
+                <select
+                  value={depositConfirmForm.payment_method}
+                  onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, payment_method: e.target.value }))}
+                  className="input"
+                >
+                  <option value="계좌이체">계좌이체</option>
+                  <option value="카드">카드</option>
+                  <option value="현금">현금</option>
+                </select>
+              </div>
+
+              <div className="p-4 bg-purple-50 rounded-xl space-y-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={depositConfirmForm.issue_tax_invoice}
+                    onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, issue_tax_invoice: e.target.checked }))}
+                    className="w-4 h-4 text-purple-600 rounded"
+                  />
+                  <span className="font-medium text-purple-800">📄 세금계산서 발행</span>
+                </label>
+                
+                {depositConfirmForm.issue_tax_invoice && (
+                  <div className="space-y-3 pt-2 border-t border-purple-200">
+                    <div>
+                      <label className="label text-purple-700">발행일</label>
+                      <input
+                        type="date"
+                        value={depositConfirmForm.tax_invoice_date}
+                        onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, tax_invoice_date: e.target.value }))}
+                        className="input"
+                      />
+                    </div>
+                    <div>
+                      <label className="label text-purple-700">세금계산서 번호 (선택)</label>
+                      <input
+                        type="text"
+                        value={depositConfirmForm.tax_invoice_number}
+                        onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, tax_invoice_number: e.target.value }))}
+                        className="input"
+                        placeholder="세금계산서 번호"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex gap-3">
+              <button
+                onClick={() => setShowDepositConfirmModal(false)}
+                className="btn btn-secondary flex-1"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDepositConfirm}
+                className="btn btn-primary flex-1 bg-indigo-600 hover:bg-indigo-700"
+              >
+                입금 확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 보증금 → 사용료 전환 모달 */}
+      {showConversionModal && selectedDeposit && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+              <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <ArrowRightLeft className="w-5 h-5 text-teal-600" />
+                보증금 → 사용료 전환
+              </h3>
+              <button onClick={() => setShowConversionModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="p-4 bg-teal-50 rounded-xl">
+                <div className="text-sm text-teal-600">전환 정보</div>
+                <div className="font-medium text-slate-900">
+                  {selectedDeposit.room_number}호 | {selectedDeposit.company_name}
+                </div>
+                <div className="text-xl font-bold text-teal-700 mt-1">
+                  {formatCurrency(selectedDeposit.amount)}
+                </div>
+                <div className="text-sm text-slate-500 mt-2">
+                  {/* @ts-ignore */}
+                  계약기간: {selectedDeposit.contract_start_date ? format(new Date(selectedDeposit.contract_start_date), 'yy.MM.dd') : '-'} ~ {selectedDeposit.contract_end_date ? format(new Date(selectedDeposit.contract_end_date), 'yy.MM.dd') : '-'}
+                </div>
+              </div>
+
+              {/* 세금계산서 정보 표시 (기존 발행 정보) */}
+              {selectedDeposit.tax_invoice_issued && (
+                <div className="p-4 bg-purple-50 rounded-xl">
+                  <div className="flex items-center gap-2 text-purple-700 font-medium">
+                    <FileText className="w-4 h-4" />
+                    세금계산서 발행됨
+                  </div>
+                  <div className="text-sm text-purple-600 mt-1">
+                    발행일: {selectedDeposit.tax_invoice_date ? format(new Date(selectedDeposit.tax_invoice_date), 'yyyy.MM.dd') : '-'}
+                    {selectedDeposit.tax_invoice_number && ` | 번호: ${selectedDeposit.tax_invoice_number}`}
+                  </div>
+                  <div className="text-xs text-purple-500 mt-2">
+                    * 보증금 입금 시 발행된 세금계산서 정보가 유지됩니다.
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="label">전환일</label>
+                <input
+                  type="date"
+                  value={conversionForm.conversion_date}
+                  onChange={(e) => setConversionForm(prev => ({ ...prev, conversion_date: e.target.value }))}
+                  className="input"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  보통 계약 종료일 또는 마지막 납부일을 선택합니다.
+                </p>
+              </div>
+
+              <div className="p-4 bg-amber-50 rounded-xl">
+                <p className="text-sm text-amber-800">
+                  ⚠️ 전환 시 보증금이 해당 월 <strong>사용료 수입</strong>으로 인식됩니다.
+                </p>
+              </div>
+            </div>
+            <div className="p-6 border-t border-slate-200 flex gap-3">
+              <button
+                onClick={() => setShowConversionModal(false)}
+                className="btn btn-secondary flex-1"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleConversion}
+                className="btn flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                사용료 전환 확정
               </button>
             </div>
           </div>

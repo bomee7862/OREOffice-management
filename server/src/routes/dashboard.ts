@@ -8,7 +8,7 @@ router.get('/', async (req, res) => {
   try {
     // 호실 현황 (POST BOX 제외)
     const roomStats = await query(`
-      SELECT 
+      SELECT
         status,
         COUNT(*) as count
       FROM rooms
@@ -59,7 +59,7 @@ router.get('/', async (req, res) => {
       FROM rooms
       WHERE room_type != '회의실' AND room_type != '자유석' AND room_type != 'POST BOX'
     `);
-    
+
     const occupiedRooms = await query(`
       SELECT COUNT(*) as count
       FROM rooms

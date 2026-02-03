@@ -114,14 +114,14 @@ router.post('/', async (req, res) => {
       ]);
     }
     
-    // 보증금이 있으면 '보증금입금' 거래 자동 생성
+    // 보증금이 있으면 '보증금입금' 거래 자동 생성 (상태: 대기)
     if (deposit && deposit > 0) {
       await query(`
         INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
-        VALUES ('입금', '보증금입금', $1, $2, $3, $4, $5, $6, '완료')
+        VALUES ('입금', '보증금입금', $1, $2, $3, $4, $5, $6, '대기')
       `, [
         deposit,
-        `${companyName} 보증금 입금`,
+        `${companyName} 보증금`,
         start_date,
         room_id,
         tenant_id,
@@ -362,6 +362,62 @@ router.get('/expiring/soon', async (req, res) => {
   } catch (error) {
     console.error('만료 예정 계약 조회 오류:', error);
     res.status(500).json({ error: '만료 예정 계약 조회에 실패했습니다.' });
+  }
+});
+
+// 기존 계약 보증금 동기화 (보증금이 있는데 거래내역이 없는 계약들 처리)
+router.post('/sync-deposits', async (req, res) => {
+  try {
+    // 보증금이 있지만 보증금입금 거래내역이 없는 활성 계약 조회
+    const contractsWithoutDeposit = await query(`
+      SELECT c.id, c.room_id, c.tenant_id, c.deposit, c.start_date, t.company_name
+      FROM contracts c
+      JOIN tenants t ON c.tenant_id = t.id
+      WHERE c.is_active = true
+        AND c.deposit > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM transactions tr
+          WHERE tr.contract_id = c.id
+            AND tr.category = '보증금입금'
+        )
+    `);
+
+    if (contractsWithoutDeposit.rows.length === 0) {
+      return res.json({
+        message: '동기화할 보증금이 없습니다.',
+        synced: 0
+      });
+    }
+
+    // 각 계약에 대해 보증금입금 거래내역 생성
+    let syncedCount = 0;
+    for (const contract of contractsWithoutDeposit.rows) {
+      await query(`
+        INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
+        VALUES ('입금', '보증금입금', $1, $2, $3, $4, $5, $6, '대기')
+      `, [
+        contract.deposit,
+        `${contract.company_name} 보증금`,
+        contract.start_date,
+        contract.room_id,
+        contract.tenant_id,
+        contract.id
+      ]);
+      syncedCount++;
+    }
+
+    res.json({
+      message: `${syncedCount}건의 보증금이 동기화되었습니다.`,
+      synced: syncedCount,
+      contracts: contractsWithoutDeposit.rows.map(c => ({
+        id: c.id,
+        company_name: c.company_name,
+        deposit: c.deposit
+      }))
+    });
+  } catch (error) {
+    console.error('보증금 동기화 오류:', error);
+    res.status(500).json({ error: '보증금 동기화에 실패했습니다.' });
   }
 });
 

@@ -4,7 +4,7 @@ export type TransactionType = '입금' | '지출';
 export type IncomeCategory = '월사용료' | '관리비' | '보증금' | '회의실' | '기타수입' | '위약금' | '비상주사용료' | '회의실사용료' | '1day사용료' | '보증금입금' | '사용료전환';
 export type ExpenseCategory = '임대료' | '공과금' | '인건비' | '청소미화' | '유지보수' | '소모품' | '마케팅' | '기타지출';
 export type TransactionCategory = IncomeCategory | ExpenseCategory;
-export type PaymentStatus = '대기' | '완료' | '연체' | '취소';
+export type PaymentStatus = '대기' | '완료' | '연체' | '취소' | '전환완료';
 export type PaymentMethod = '계좌이체' | '카드' | '현금' | '자동이체' | '기타';
 export type TenantType = '상주' | '비상주';
 export type DocumentType = '계약서' | '사업자등록증' | '신분증' | '기타';
@@ -139,6 +139,8 @@ export interface Transaction {
   room_number?: string;
   contract_start_date?: string;
   contract_end_date?: string;
+  monthly_rent_vat?: number;
+  payment_day?: number;
 }
 
 export interface Billing {

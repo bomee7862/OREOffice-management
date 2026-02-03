@@ -492,20 +492,30 @@ export default function FloorPlan() {
   const handleTerminateContract = async () => {
     if (!selectedRoom?.contract_id) return;
 
+    const isPostBox = selectedRoom.room_type === 'POST BOX';
+
     try {
       // 계약 종료 (종료 유형 포함)
-      const result = await contractsApi.terminate(selectedRoom.contract_id, {
-        termination_type: terminationForm.type,
+      await contractsApi.terminate(selectedRoom.contract_id, {
+        termination_type: isPostBox ? '계약종료' : terminationForm.type,
         termination_reason: terminationForm.reason || undefined
       });
-      
-      // 호실 상태를 '계약종료'로 변경하고 이전 입주사 정보 저장
-      await roomsApi.updateStatus(selectedRoom.id, '계약종료', selectedRoom.company_name, selectedRoom.end_date);
+
+      // POST BOX: 공실로 전환 (입주사 정보 보관)
+      // 일반 호실: 계약종료 상태로 변경
+      if (isPostBox) {
+        await roomsApi.updateStatus(selectedRoom.id, '공실', selectedRoom.company_name, selectedRoom.end_date);
+      } else {
+        await roomsApi.updateStatus(selectedRoom.id, '계약종료', selectedRoom.company_name, selectedRoom.end_date);
+      }
+
       await loadData();
       closeTerminateModal();
       closeModal();
-      
-      if (terminationForm.type === '중도종료') {
+
+      if (isPostBox) {
+        alert(`계약이 종료되었습니다.\n\nPOST BOX ${selectedRoom.room_number.replace('PB', '')}가 공실로 전환되었습니다.\n입주사 정보는 보관됩니다.`);
+      } else if (terminationForm.type === '중도종료') {
         const penaltyAmount = selectedRoom.deposit || 0;
         if (penaltyAmount > 0) {
           alert(`계약이 종료되었습니다.\n\n종료유형: 중도종료\n위약금: ${formatCurrency(penaltyAmount)} (수입 등록됨)`);
@@ -1473,7 +1483,9 @@ export default function FloorPlan() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold text-slate-900">
-                {selectedRoom.room_number}호 계약 종료
+                {selectedRoom.room_type === 'POST BOX'
+                  ? `POST BOX ${selectedRoom.room_number.replace('PB', '')} 계약 종료`
+                  : `${selectedRoom.room_number}호 계약 종료`}
               </h2>
               <button onClick={closeTerminateModal} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5 text-slate-500" />
@@ -1482,73 +1494,95 @@ export default function FloorPlan() {
 
             <div className="p-6 space-y-6">
               {/* 현재 계약 정보 */}
-              <div className="p-4 bg-slate-50 rounded-xl">
+              <div className={`p-4 rounded-xl ${selectedRoom.room_type === 'POST BOX' ? 'bg-violet-50' : 'bg-slate-50'}`}>
                 <p className="text-sm text-slate-600">
                   <span className="font-medium">입주사:</span> {selectedRoom.company_name}
                 </p>
-                <p className="text-sm text-slate-600 mt-1">
-                  <span className="font-medium">보증금:</span> {formatCurrency(selectedRoom.deposit || 0)}
-                </p>
+                {/* POST BOX가 아닌 경우에만 보증금 표시 */}
+                {selectedRoom.room_type !== 'POST BOX' && (
+                  <p className="text-sm text-slate-600 mt-1">
+                    <span className="font-medium">보증금:</span> {formatCurrency(selectedRoom.deposit || 0)}
+                  </p>
+                )}
                 <p className="text-sm text-slate-600 mt-1">
                   <span className="font-medium">계약기간:</span> {selectedRoom.start_date && format(new Date(selectedRoom.start_date), 'yy.MM.dd')} ~ {selectedRoom.end_date && format(new Date(selectedRoom.end_date), 'yy.MM.dd')}
                 </p>
+                {/* POST BOX인 경우 납부 금액 표시 */}
+                {selectedRoom.room_type === 'POST BOX' && (
+                  <p className="text-sm text-slate-600 mt-1">
+                    <span className="font-medium">납부금액:</span> {formatCurrency(selectedRoom.monthly_rent_vat || selectedRoom.monthly_rent || 0)} (일시불)
+                  </p>
+                )}
               </div>
 
-              {/* 종료 유형 선택 */}
-              <div>
-                <label className="label">종료 유형 *</label>
-                <div className="grid grid-cols-2 gap-3 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setTerminationForm(prev => ({ ...prev, type: '만기종료' }))}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      terminationForm.type === '만기종료'
-                        ? 'border-primary-500 bg-primary-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <p className="font-semibold text-slate-900">만기종료</p>
-                    <p className="text-xs text-slate-500 mt-1">보증금 → 종료월 사용료</p>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTerminationForm(prev => ({ ...prev, type: '중도종료' }))}
-                    className={`p-4 rounded-xl border-2 text-left transition-all ${
-                      terminationForm.type === '중도종료'
-                        ? 'border-orange-500 bg-orange-50'
-                        : 'border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    <p className="font-semibold text-slate-900">중도종료</p>
-                    <p className="text-xs text-slate-500 mt-1">보증금 → 위약금 전환</p>
-                  </button>
+              {/* POST BOX인 경우 - 간단한 종료 안내 */}
+              {selectedRoom.room_type === 'POST BOX' ? (
+                <div className="p-4 bg-violet-50 border border-violet-200 rounded-xl">
+                  <p className="font-medium text-violet-800">📬 비상주 계약 종료</p>
+                  <p className="text-sm text-violet-700 mt-1">
+                    계약을 종료하고 POST BOX를 공실로 전환합니다.<br />
+                    입주사 정보는 보관됩니다.
+                  </p>
                 </div>
-              </div>
+              ) : (
+                <>
+                  {/* 종료 유형 선택 - 일반 호실만 */}
+                  <div>
+                    <label className="label">종료 유형 *</label>
+                    <div className="grid grid-cols-2 gap-3 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => setTerminationForm(prev => ({ ...prev, type: '만기종료' }))}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          terminationForm.type === '만기종료'
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <p className="font-semibold text-slate-900">만기종료</p>
+                        <p className="text-xs text-slate-500 mt-1">보증금 → 종료월 사용료</p>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setTerminationForm(prev => ({ ...prev, type: '중도종료' }))}
+                        className={`p-4 rounded-xl border-2 text-left transition-all ${
+                          terminationForm.type === '중도종료'
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <p className="font-semibold text-slate-900">중도종료</p>
+                        <p className="text-xs text-slate-500 mt-1">보증금 → 위약금 전환</p>
+                      </button>
+                    </div>
+                  </div>
 
-              {/* 중도종료 시 위약금 안내 */}
-              {terminationForm.type === '중도종료' && (
-                <div className={`p-4 rounded-xl border ${
-                  selectedRoom.deposit
-                    ? 'bg-orange-50 border-orange-200'
-                    : 'bg-slate-50 border-slate-200'
-                }`}>
-                  {selectedRoom.deposit ? (
-                    <>
-                      <p className="font-medium text-orange-800">💰 위약금 안내</p>
-                      <p className="text-sm text-orange-700 mt-1">
-                        보증금 {formatCurrency(selectedRoom.deposit)}이 위약금으로 전환되며,
-                        이번 달 수입에 자동 반영됩니다.
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="font-medium text-slate-700">ℹ️ 위약금 없음</p>
-                      <p className="text-sm text-slate-600 mt-1">
-                        보증금이 0원이므로 위약금이 발생하지 않습니다.
-                      </p>
-                    </>
+                  {/* 중도종료 시 위약금 안내 - 일반 호실만 */}
+                  {terminationForm.type === '중도종료' && (
+                    <div className={`p-4 rounded-xl border ${
+                      selectedRoom.deposit
+                        ? 'bg-orange-50 border-orange-200'
+                        : 'bg-slate-50 border-slate-200'
+                    }`}>
+                      {selectedRoom.deposit ? (
+                        <>
+                          <p className="font-medium text-orange-800">💰 위약금 안내</p>
+                          <p className="text-sm text-orange-700 mt-1">
+                            보증금 {formatCurrency(selectedRoom.deposit)}이 위약금으로 전환되며,
+                            이번 달 수입에 자동 반영됩니다.
+                          </p>
+                        </>
+                      ) : (
+                        <>
+                          <p className="font-medium text-slate-700">ℹ️ 위약금 없음</p>
+                          <p className="text-sm text-slate-600 mt-1">
+                            보증금이 0원이므로 위약금이 발생하지 않습니다.
+                          </p>
+                        </>
+                      )}
+                    </div>
                   )}
-                </div>
+                </>
               )}
 
               {/* 종료 사유 */}
@@ -1567,12 +1601,18 @@ export default function FloorPlan() {
                 <button
                   onClick={handleTerminateContract}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white ${
-                    terminationForm.type === '중도종료'
-                      ? 'bg-orange-500 hover:bg-orange-600'
-                      : 'bg-primary-600 hover:bg-primary-700'
+                    selectedRoom.room_type === 'POST BOX'
+                      ? 'bg-violet-600 hover:bg-violet-700'
+                      : terminationForm.type === '중도종료'
+                        ? 'bg-orange-500 hover:bg-orange-600'
+                        : 'bg-primary-600 hover:bg-primary-700'
                   }`}
                 >
-                  {terminationForm.type === '중도종료' ? '중도종료 (위약금 발생)' : '만기종료'}
+                  {selectedRoom.room_type === 'POST BOX'
+                    ? '계약 종료'
+                    : terminationForm.type === '중도종료'
+                      ? '중도종료 (위약금 발생)'
+                      : '만기종료'}
                 </button>
                 <button onClick={closeTerminateModal} className="btn-secondary flex-1">
                   취소

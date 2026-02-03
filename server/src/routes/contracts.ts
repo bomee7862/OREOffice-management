@@ -250,70 +250,74 @@ router.post('/:id/terminate', async (req, res) => {
     const { id } = req.params;
     const { termination_type, termination_reason } = req.body;
     // termination_type: '만기종료' | '중도종료'
-    
-    // 계약 정보 조회
+
+    // 계약 정보 조회 (room_type 포함)
     const contractInfo = await query(`
-      SELECT c.*, t.company_name, r.room_number 
-      FROM contracts c 
+      SELECT c.*, t.company_name, r.room_number, r.room_type
+      FROM contracts c
       JOIN tenants t ON c.tenant_id = t.id
       JOIN rooms r ON c.room_id = r.id
       WHERE c.id = $1
     `, [id]);
-    
+
     if (contractInfo.rows.length === 0) {
       return res.status(404).json({ error: '계약을 찾을 수 없습니다.' });
     }
-    
+
     const contract = contractInfo.rows[0];
     const deposit = contract.deposit || 0;
-    
+    const isPostBox = contract.room_type === 'POST BOX';
+
     // 종료 유형에 따른 처리
     let depositStatus = '보유';
     let penaltyAmount = 0;
-    
-    if (termination_type === '중도종료') {
-      // 중도종료: 보증금 → 위약금 전환
-      depositStatus = '위약금전환';
-      penaltyAmount = deposit;
-      
-      // 위약금 수입 거래 생성 (contract_id 포함하여 contract_end_date 조회 가능하게)
-      if (penaltyAmount > 0) {
-        await query(`
-          INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
-          VALUES ('입금', '위약금', $1, $2, $3, $4, $5, $6, '완료')
-        `, [
-          penaltyAmount,
-          `${contract.room_number}호 ${contract.company_name} 중도해지 위약금`,
-          contract.end_date,  // 계약 종료일을 transaction_date로 사용
-          contract.room_id,
-          contract.tenant_id,
-          id  // contract_id 추가
-        ]);
-      }
-    } else {
-      // 만기종료: 보증금 → 종료월 사용료로 전환
-      depositStatus = '사용료전환';
-      
-      // 사용료전환 수입 거래 생성 (보증금이 마지막달 사용료로 대체됨)
-      if (deposit > 0) {
-        await query(`
-          INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
-          VALUES ('입금', '사용료전환', $1, $2, $3, $4, $5, $6, '완료')
-        `, [
-          deposit,
-          `${contract.room_number}호 ${contract.company_name} 만기종료 - 보증금→사용료 전환`,
-          contract.end_date,  // 계약 종료일을 transaction_date로 사용
-          contract.room_id,
-          contract.tenant_id,
-          id  // contract_id 추가
-        ]);
+
+    // POST BOX (비상주)는 일시불 납부이므로 보증금 처리 없음
+    if (!isPostBox) {
+      if (termination_type === '중도종료') {
+        // 중도종료: 보증금 → 위약금 전환
+        depositStatus = '위약금전환';
+        penaltyAmount = deposit;
+
+        // 위약금 수입 거래 생성 (contract_id 포함하여 contract_end_date 조회 가능하게)
+        if (penaltyAmount > 0) {
+          await query(`
+            INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
+            VALUES ('입금', '위약금', $1, $2, $3, $4, $5, $6, '완료')
+          `, [
+            penaltyAmount,
+            `${contract.room_number}호 ${contract.company_name} 중도해지 위약금`,
+            contract.end_date,  // 계약 종료일을 transaction_date로 사용
+            contract.room_id,
+            contract.tenant_id,
+            id  // contract_id 추가
+          ]);
+        }
+      } else {
+        // 만기종료: 보증금 → 종료월 사용료로 전환
+        depositStatus = '사용료전환';
+
+        // 사용료전환 수입 거래 생성 (보증금이 마지막달 사용료로 대체됨)
+        if (deposit > 0) {
+          await query(`
+            INSERT INTO transactions (type, category, amount, description, transaction_date, room_id, tenant_id, contract_id, status)
+            VALUES ('입금', '사용료전환', $1, $2, $3, $4, $5, $6, '완료')
+          `, [
+            deposit,
+            `${contract.room_number}호 ${contract.company_name} 만기종료 - 보증금→사용료 전환`,
+            contract.end_date,  // 계약 종료일을 transaction_date로 사용
+            contract.room_id,
+            contract.tenant_id,
+            id  // contract_id 추가
+          ]);
+        }
       }
     }
-    
+
     // 계약 비활성화 및 종료 정보 저장
-    const contractResult = await query(`
-      UPDATE contracts 
-      SET is_active = false, 
+    await query(`
+      UPDATE contracts
+      SET is_active = false,
           termination_type = $1,
           penalty_amount = $2,
           deposit_status = $3,
@@ -322,15 +326,16 @@ router.post('/:id/terminate', async (req, res) => {
           updated_at = CURRENT_TIMESTAMP
       WHERE id = $5
       RETURNING room_id
-    `, [termination_type || '만기종료', penaltyAmount, depositStatus, termination_reason, id]);
-    
+    `, [isPostBox ? '계약종료' : (termination_type || '만기종료'), penaltyAmount, depositStatus, termination_reason, id]);
+
     // 호실 상태는 FloorPlan에서 별도로 처리 (계약종료 상태로)
-    
-    res.json({ 
+
+    res.json({
       message: '계약이 종료되었습니다.',
-      termination_type: termination_type || '만기종료',
+      termination_type: isPostBox ? '계약종료' : (termination_type || '만기종료'),
       penalty_amount: penaltyAmount,
-      deposit_status: depositStatus
+      deposit_status: depositStatus,
+      is_post_box: isPostBox
     });
   } catch (error) {
     console.error('계약 종료 오류:', error);

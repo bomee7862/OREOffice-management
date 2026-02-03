@@ -338,6 +338,86 @@ router.post('/:id/terminate', async (req, res) => {
   }
 });
 
+// 계약 취소/삭제
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mode } = req.query; // 'soft' (공실 전환) or 'hard' (완전 삭제)
+
+    // 계약 정보 조회
+    const contractInfo = await query(`
+      SELECT c.*, t.company_name, r.room_number
+      FROM contracts c
+      JOIN tenants t ON c.tenant_id = t.id
+      JOIN rooms r ON c.room_id = r.id
+      WHERE c.id = $1
+    `, [id]);
+
+    if (contractInfo.rows.length === 0) {
+      return res.status(404).json({ error: '계약을 찾을 수 없습니다.' });
+    }
+
+    const contract = contractInfo.rows[0];
+
+    if (mode === 'hard') {
+      // 완전 삭제 모드: 계약 + 관련 거래내역 삭제
+
+      // 1. 관련 거래내역 삭제
+      await query('DELETE FROM transactions WHERE contract_id = $1', [id]);
+
+      // 2. 계약 삭제
+      await query('DELETE FROM contracts WHERE id = $1', [id]);
+
+      // 3. 호실 상태를 '공실'로 변경
+      await query(`
+        UPDATE rooms
+        SET status = '공실',
+            last_company_name = NULL,
+            contract_ended_at = NULL,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [contract.room_id]);
+
+      res.json({
+        message: '계약이 완전히 삭제되었습니다.',
+        mode: 'hard',
+        deleted_contract_id: id,
+        room_number: contract.room_number
+      });
+    } else {
+      // 소프트 삭제 모드 (기본값): 계약 비활성화, 기록 보존
+
+      // 1. 계약 비활성화
+      await query(`
+        UPDATE contracts
+        SET is_active = false,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $1
+      `, [id]);
+
+      // 2. 호실 상태를 '공실'로 변경 (이전 입주사 정보 유지)
+      await query(`
+        UPDATE rooms
+        SET status = '공실',
+            last_company_name = $1,
+            contract_ended_at = CURRENT_DATE,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = $2
+      `, [contract.company_name, contract.room_id]);
+
+      res.json({
+        message: '계약이 취소되고 공실로 전환되었습니다.',
+        mode: 'soft',
+        contract_id: id,
+        room_number: contract.room_number
+      });
+    }
+  } catch (error) {
+    console.error('계약 삭제 오류:', error);
+    res.status(500).json({ error: '계약 삭제에 실패했습니다.' });
+  }
+});
+
 // 만료 예정 계약 조회
 router.get('/expiring/soon', async (req, res) => {
   try {

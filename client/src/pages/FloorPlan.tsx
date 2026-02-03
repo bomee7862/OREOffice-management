@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef, MouseEvent } from 'react';
 import { roomsApi, tenantsApi, contractsApi, billingsApi } from '../api';
 import { Room, Tenant, Contract, Billing } from '../types';
-import { X, Building2, User, Phone, Calendar, CreditCard, Mailbox, Move, Copy, Trash2, Plus, CheckCircle2, Clock, Gift } from 'lucide-react';
+import { X, Building2, User, Phone, Calendar, CreditCard, Mailbox, Move, Copy, Trash2, Plus, CheckCircle2, Clock, Gift, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -41,6 +41,8 @@ export default function FloorPlan() {
     type: '만기종료' as '만기종료' | '중도종료',
     reason: ''
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteMode, setDeleteMode] = useState<'soft' | 'hard'>('soft');
   
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
@@ -353,8 +355,8 @@ export default function FloorPlan() {
     }
   };
 
-  // 카드 삭제 (계약 해지)
-  const handleDeleteCard = async (e: MouseEvent, room: Room) => {
+  // 카드 삭제 모달 열기
+  const handleDeleteCard = (e: MouseEvent, room: Room) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -363,27 +365,41 @@ export default function FloorPlan() {
       return;
     }
 
-    if (!confirm(`"${room.company_name}" (${room.room_number}호)의 계약을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.`)) {
+    setSelectedRoom(room);
+    setDeleteMode('soft');
+    setShowDeleteModal(true);
+  };
+
+  // 삭제 모달 닫기
+  const closeDeleteModal = () => {
+    setShowDeleteModal(false);
+    setDeleteMode('soft');
+  };
+
+  // 계약 삭제 실행
+  const handleDeleteContract = async () => {
+    if (!selectedRoom) return;
+
+    const activeContract = contracts.find(c => c.room_id === selectedRoom.id && c.is_active);
+    if (!activeContract) {
+      alert('활성 계약을 찾을 수 없습니다.');
       return;
     }
 
     try {
-      // 해당 호실의 활성 계약 찾기
-      const activeContract = contracts.find(c => c.room_id === room.id && c.is_active);
-      
-      if (activeContract) {
-        // 계약 비활성화
-        await contractsApi.update(activeContract.id, { is_active: false });
-      }
-
-      // 호실 상태를 공실로 변경
-      await roomsApi.update(room.id, { status: '공실' });
-
-      alert('계약이 삭제되었습니다.');
+      await contractsApi.delete(activeContract.id, deleteMode);
       await loadData();
+      closeDeleteModal();
+      closeModal();
+
+      if (deleteMode === 'hard') {
+        alert('계약이 완전히 삭제되었습니다.\n관련 거래내역도 함께 삭제되었습니다.');
+      } else {
+        alert('계약이 취소되고 공실로 전환되었습니다.\n기록은 보존됩니다.');
+      }
     } catch (error) {
-      console.error('카드 삭제 오류:', error);
-      alert('카드 삭제에 실패했습니다.');
+      console.error('계약 삭제 오류:', error);
+      alert('계약 삭제에 실패했습니다.');
     }
   };
 
@@ -1102,6 +1118,15 @@ export default function FloorPlan() {
                     <button onClick={openTerminateModal} className="flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white bg-orange-500 hover:bg-orange-600">
                       계약 종료
                     </button>
+                    <button
+                      onClick={() => {
+                        setDeleteMode('soft');
+                        setShowDeleteModal(true);
+                      }}
+                      className="flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white bg-red-500 hover:bg-red-600"
+                    >
+                      계약 삭제
+                    </button>
                   </>
                 )}
                 {selectedRoom.status === '계약종료' && (
@@ -1503,8 +1528,8 @@ export default function FloorPlan() {
               {/* 중도종료 시 위약금 안내 */}
               {terminationForm.type === '중도종료' && (
                 <div className={`p-4 rounded-xl border ${
-                  selectedRoom.deposit 
-                    ? 'bg-orange-50 border-orange-200' 
+                  selectedRoom.deposit
+                    ? 'bg-orange-50 border-orange-200'
                     : 'bg-slate-50 border-slate-200'
                 }`}>
                   {selectedRoom.deposit ? (
@@ -1539,8 +1564,8 @@ export default function FloorPlan() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-200">
-                <button 
-                  onClick={handleTerminateContract} 
+                <button
+                  onClick={handleTerminateContract}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white ${
                     terminationForm.type === '중도종료'
                       ? 'bg-orange-500 hover:bg-orange-600'
@@ -1550,6 +1575,132 @@ export default function FloorPlan() {
                   {terminationForm.type === '중도종료' ? '중도종료 (위약금 발생)' : '만기종료'}
                 </button>
                 <button onClick={closeTerminateModal} className="btn-secondary flex-1">
+                  취소
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 계약 삭제 모달 */}
+      {showDeleteModal && selectedRoom && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-900">
+                  계약 삭제
+                </h2>
+              </div>
+              <button onClick={closeDeleteModal} className="p-2 hover:bg-slate-100 rounded-lg">
+                <X className="w-5 h-5 text-slate-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* 현재 계약 정보 */}
+              <div className="p-4 bg-slate-50 rounded-xl">
+                <p className="text-sm text-slate-600">
+                  <span className="font-medium">호실:</span> {selectedRoom.room_type === 'POST BOX'
+                    ? `POST BOX ${selectedRoom.room_number.replace('PB', '')}`
+                    : `${selectedRoom.room_number}호`}
+                </p>
+                <p className="text-sm text-slate-600 mt-1">
+                  <span className="font-medium">입주사:</span> {selectedRoom.company_name}
+                </p>
+                <p className="text-sm text-slate-600 mt-1">
+                  <span className="font-medium">계약기간:</span> {selectedRoom.start_date && format(new Date(selectedRoom.start_date), 'yy.MM.dd')} ~ {selectedRoom.end_date && format(new Date(selectedRoom.end_date), 'yy.MM.dd')}
+                </p>
+              </div>
+
+              {/* 삭제 옵션 선택 */}
+              <div>
+                <label className="label">삭제 옵션 선택</label>
+                <div className="space-y-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setDeleteMode('soft')}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      deleteMode === 'soft'
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                        deleteMode === 'soft' ? 'border-blue-500' : 'border-slate-300'
+                      }`}>
+                        {deleteMode === 'soft' && <div className="w-2.5 h-2.5 rounded-full bg-blue-500" />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">공실 전환 (기록 보존)</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          계약을 비활성화하고 호실을 공실로 전환합니다.<br />
+                          이전 입주사 정보와 거래내역이 보존됩니다.
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setDeleteMode('hard')}
+                    className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                      deleteMode === 'hard'
+                        ? 'border-red-500 bg-red-50'
+                        : 'border-slate-200 hover:border-slate-300'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center mt-0.5 ${
+                        deleteMode === 'hard' ? 'border-red-500' : 'border-slate-300'
+                      }`}>
+                        {deleteMode === 'hard' && <div className="w-2.5 h-2.5 rounded-full bg-red-500" />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-slate-900">완전 삭제 (기록 삭제)</p>
+                        <p className="text-xs text-slate-500 mt-1">
+                          계약과 관련 거래내역을 완전히 삭제합니다.<br />
+                          <span className="text-red-500 font-medium">⚠️ 이 작업은 복구할 수 없습니다.</span>
+                        </p>
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* 완전 삭제 경고 */}
+              {deleteMode === 'hard' && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-medium text-red-800">주의: 완전 삭제</p>
+                      <p className="text-sm text-red-700 mt-1">
+                        이 계약과 관련된 모든 거래내역(보증금, 청구 등)이 함께 삭제됩니다.
+                        삭제된 데이터는 복구할 수 없습니다.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4 border-t border-slate-200">
+                <button
+                  onClick={handleDeleteContract}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white ${
+                    deleteMode === 'hard'
+                      ? 'bg-red-500 hover:bg-red-600'
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  }`}
+                >
+                  {deleteMode === 'hard' ? '완전 삭제' : '공실 전환'}
+                </button>
+                <button onClick={closeDeleteModal} className="btn-secondary flex-1">
                   취소
                 </button>
               </div>

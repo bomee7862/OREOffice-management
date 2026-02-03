@@ -33,8 +33,10 @@ export const contractsApi = {
   getById: (id: number) => api.get(`/contracts/${id}`),
   create: (data: any) => api.post('/contracts', data),
   update: (id: number, data: any) => api.put(`/contracts/${id}`, data),
-  terminate: (id: number, data?: { termination_type?: string; termination_reason?: string }) => 
+  terminate: (id: number, data?: { termination_type?: string; termination_reason?: string }) =>
     api.post(`/contracts/${id}/terminate`, data || {}),
+  delete: (id: number, mode: 'soft' | 'hard' = 'soft') =>
+    api.delete(`/contracts/${id}`, { params: { mode } }),
   getExpiring: (days?: number) => api.get('/contracts/expiring/soon', { params: { days } }),
   updateCard: (id: number, data: { card_x?: number; card_y?: number; card_width?: number; card_height?: number }) =>
     api.patch(`/contracts/${id}/card`, data),

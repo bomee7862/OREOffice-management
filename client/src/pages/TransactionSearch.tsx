@@ -1,27 +1,41 @@
-import { useEffect, useState } from 'react';
-import { transactionsApi, tenantsApi, roomsApi, billingsApi } from '../api';
-import { Transaction, Tenant, Room, Billing } from '../types';
+import { useEffect, useState, useMemo } from 'react';
+import { transactionsApi, tenantsApi, roomsApi, billingsApi, contractsApi } from '../api';
+import { Transaction, Tenant, Room, Billing, Contract } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { 
-  Search, Download, Filter, ArrowUpCircle, ArrowDownCircle, 
-  Building2, Calendar, X, TrendingUp, Calculator
+import {
+  Download, Filter, ArrowUpCircle, ArrowDownCircle,
+  X, TrendingUp, Calculator, Wallet, AlertCircle, Clock, CheckCircle2, RefreshCw
 } from 'lucide-react';
 
 const INCOME_CATEGORIES = ['월사용료', '관리비', '보증금입금', '위약금', '사용료전환', '비상주사용료', '회의실사용료', '1day사용료', '기타수입'];
 const EXPENSE_CATEGORIES = ['임대료', '관리비', '공과금', '청소미화', '유지보수', '소모품', '마케팅', '기타지출'];
-// 보증금입금은 현금 유입이지만 매출이 아님
 const NON_REVENUE_CATEGORIES = ['보증금입금'];
 
+type TabType = 'transactions' | 'deposits' | 'receivables';
+
 export default function TransactionSearch() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  // 탭 상태
+  const [activeTab, setActiveTab] = useState<TabType>('transactions');
+
+  // 공통 데이터
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  // 전체 거래 탭 데이터
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [monthlyBillings, setMonthlyBillings] = useState<Billing[]>([]);
   const [monthlyExpenses, setMonthlyExpenses] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [showForecast, setShowForecast] = useState(false);
+
+  // 보증금 현황 탭 데이터
+  const [depositTransactions, setDepositTransactions] = useState<Transaction[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+
+  // 미수금 현황 탭 데이터
+  const [allBillings, setAllBillings] = useState<Billing[]>([]);
 
   const [filters, setFilters] = useState({
     type: '',
@@ -37,12 +51,18 @@ export default function TransactionSearch() {
 
   useEffect(() => {
     loadMasterData();
-    loadMonthlyForecast();
   }, []);
 
   useEffect(() => {
-    searchTransactions();
-  }, [filters]);
+    if (activeTab === 'transactions') {
+      searchTransactions();
+      loadMonthlyForecast();
+    } else if (activeTab === 'deposits') {
+      loadDepositData();
+    } else if (activeTab === 'receivables') {
+      loadReceivablesData();
+    }
+  }, [activeTab, filters]);
 
   const loadMasterData = async () => {
     try {
@@ -51,7 +71,7 @@ export default function TransactionSearch() {
         roomsApi.getAll()
       ]);
       setTenants(tenantsRes.data);
-      setRooms(roomsRes.data.filter((r: Room) => r.room_type !== 'POST BOX'));
+      setRooms(roomsRes.data);
     } catch (error) {
       console.error('데이터 로딩 오류:', error);
     }
@@ -61,12 +81,12 @@ export default function TransactionSearch() {
     try {
       const startDate = format(startOfMonth(new Date()), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(new Date()), 'yyyy-MM-dd');
-      
+
       const [billingsRes, expensesRes] = await Promise.all([
         billingsApi.getAll({ year_month: currentYearMonth }),
         transactionsApi.getAll({ type: '지출', start_date: startDate, end_date: endDate })
       ]);
-      
+
       setMonthlyBillings(billingsRes.data);
       setMonthlyExpenses(expensesRes.data);
     } catch (error) {
@@ -90,6 +110,44 @@ export default function TransactionSearch() {
       setTransactions(result.data);
     } catch (error) {
       console.error('검색 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadDepositData = async () => {
+    setLoading(true);
+    try {
+      const [depositsRes, contractsRes] = await Promise.all([
+        transactionsApi.getDeposits({}),
+        contractsApi.getAll()
+      ]);
+      setDepositTransactions(depositsRes.data);
+      setContracts(contractsRes.data);
+    } catch (error) {
+      console.error('보증금 데이터 로딩 오류:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadReceivablesData = async () => {
+    setLoading(true);
+    try {
+      // 최근 6개월치 billings 조회
+      const months = [];
+      for (let i = 0; i < 6; i++) {
+        const date = new Date();
+        date.setMonth(date.getMonth() - i);
+        months.push(format(date, 'yyyy-MM'));
+      }
+
+      const billingsPromises = months.map(ym => billingsApi.getAll({ year_month: ym }));
+      const results = await Promise.all(billingsPromises);
+      const allData = results.flatMap(r => r.data);
+      setAllBillings(allData);
+    } catch (error) {
+      console.error('미수금 데이터 로딩 오류:', error);
     } finally {
       setLoading(false);
     }
@@ -156,7 +214,7 @@ export default function TransactionSearch() {
     URL.revokeObjectURL(url);
   };
 
-  // 통계 계산 (보증금입금은 매출에서 제외)
+  // 전체 거래 탭 통계
   const incomeTotal = transactions
     .filter(t => t.type === '입금' && t.status === '완료' && !NON_REVENUE_CATEGORIES.includes(t.category))
     .reduce((sum, t) => sum + t.amount, 0);
@@ -167,36 +225,122 @@ export default function TransactionSearch() {
     .filter(t => t.type === '지출' && t.status === '완료')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const availableCategories = filters.type === '입금' 
-    ? INCOME_CATEGORIES 
-    : filters.type === '지출' 
-    ? EXPENSE_CATEGORIES 
+  const availableCategories = filters.type === '입금'
+    ? INCOME_CATEGORIES
+    : filters.type === '지출'
+    ? EXPENSE_CATEGORIES
     : [...INCOME_CATEGORIES, ...EXPENSE_CATEGORIES];
 
-  return (
-    <div className="space-y-6">
-      {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">📊 거래 조회</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="btn btn-secondary flex items-center gap-2"
-          >
-            <Filter className="w-4 h-4" />
-            필터 {showFilters ? '숨기기' : '보기'}
-          </button>
-          <button
-            onClick={exportToCSV}
-            className="btn btn-primary flex items-center gap-2"
-            disabled={transactions.length === 0}
-          >
-            <Download className="w-4 h-4" />
-            엑셀 다운로드
-          </button>
-        </div>
-      </div>
+  // 보증금 현황 계산
+  const depositStats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = format(today, 'yyyy-MM');
 
+    // 보유 중인 보증금 (완료 상태)
+    const holding = depositTransactions.filter(d =>
+      d.status === '완료'
+    );
+
+    // 입금 대기 중인 보증금
+    const pending = depositTransactions.filter(d => d.status === '대기');
+
+    // 전환 예정 (계약 종료월이 이번달 또는 지난 것)
+    const conversionPending = holding.filter(d => {
+      const contract = contracts.find(c =>
+        c.tenant_id === d.tenant_id && c.room_id === d.room_id && c.is_active
+      );
+      if (!contract) return false;
+      const endMonth = contract.end_date?.substring(0, 7);
+      return endMonth && endMonth <= currentMonth;
+    });
+
+    const totalHolding = holding.reduce((sum, d) => sum + d.amount, 0);
+    const totalPending = pending.reduce((sum, d) => sum + d.amount, 0);
+    const totalConversionPending = conversionPending.reduce((sum, d) => sum + d.amount, 0);
+
+    return {
+      holding,
+      pending,
+      conversionPending,
+      totalHolding,
+      totalPending,
+      totalConversionPending,
+      total: totalHolding + totalPending
+    };
+  }, [depositTransactions, contracts]);
+
+  // 미수금 현황 계산
+  const receivablesStats = useMemo(() => {
+    const today = new Date();
+    const currentMonth = format(today, 'yyyy-MM');
+
+    // 미입금 청구 (대기 상태)
+    const unpaid = allBillings.filter(b => b.status === '대기');
+
+    // 이번 달 미수금
+    const currentMonthUnpaid = unpaid.filter(b => b.year_month === currentMonth);
+
+    // 연체 (이번 달 이전 + 납부일 지난 것)
+    const overdue = unpaid.filter(b => {
+      if (b.year_month >= currentMonth) return false;
+      return true; // 이전 달 청구는 모두 연체로 간주
+    });
+
+    const totalUnpaid = unpaid.reduce((sum, b) => sum + b.amount, 0);
+    const totalCurrentMonth = currentMonthUnpaid.reduce((sum, b) => sum + b.amount, 0);
+    const totalOverdue = overdue.reduce((sum, b) => sum + b.amount, 0);
+
+    return {
+      unpaid,
+      currentMonthUnpaid,
+      overdue,
+      totalUnpaid,
+      totalCurrentMonth,
+      totalOverdue
+    };
+  }, [allBillings]);
+
+  // 탭 렌더링
+  const renderTabs = () => (
+    <div className="flex gap-1 p-1 bg-slate-100 rounded-xl w-fit">
+      <button
+        onClick={() => setActiveTab('transactions')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+          activeTab === 'transactions'
+            ? 'bg-white text-slate-900 shadow-sm'
+            : 'text-slate-600 hover:text-slate-900'
+        }`}
+      >
+        전체 거래
+      </button>
+      <button
+        onClick={() => setActiveTab('deposits')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+          activeTab === 'deposits'
+            ? 'bg-white text-slate-900 shadow-sm'
+            : 'text-slate-600 hover:text-slate-900'
+        }`}
+      >
+        <Wallet className="w-4 h-4" />
+        보증금 현황
+      </button>
+      <button
+        onClick={() => setActiveTab('receivables')}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
+          activeTab === 'receivables'
+            ? 'bg-white text-slate-900 shadow-sm'
+            : 'text-slate-600 hover:text-slate-900'
+        }`}
+      >
+        <AlertCircle className="w-4 h-4" />
+        미수금 현황
+      </button>
+    </div>
+  );
+
+  // 전체 거래 탭 컨텐츠
+  const renderTransactionsTab = () => (
+    <>
       {/* 필터 */}
       {showFilters && (
         <div className="card p-6 space-y-4">
@@ -211,7 +355,6 @@ export default function TransactionSearch() {
             </button>
           </div>
 
-          {/* 기간 */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="label">시작일</label>
@@ -254,7 +397,7 @@ export default function TransactionSearch() {
                 className="input"
               >
                 <option value="">전체</option>
-                {rooms.map((room) => (
+                {rooms.filter(r => r.room_type !== 'POST BOX').map((room) => (
                   <option key={room.id} value={room.id}>
                     {room.room_number}호
                   </option>
@@ -263,7 +406,6 @@ export default function TransactionSearch() {
             </div>
           </div>
 
-          {/* 유형 */}
           <div>
             <label className="label">유형</label>
             <div className="flex gap-2">
@@ -296,7 +438,6 @@ export default function TransactionSearch() {
             </div>
           </div>
 
-          {/* 카테고리 */}
           <div>
             <label className="label">카테고리</label>
             <div className="flex flex-wrap gap-2">
@@ -316,7 +457,6 @@ export default function TransactionSearch() {
             </div>
           </div>
 
-          {/* 상태 */}
           <div>
             <label className="label">상태</label>
             <div className="flex gap-2">
@@ -326,7 +466,7 @@ export default function TransactionSearch() {
                   onClick={() => toggleStatus(status)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     filters.status.includes(status)
-                      ? status === '완료' ? 'bg-green-600 text-white' 
+                      ? status === '완료' ? 'bg-green-600 text-white'
                         : status === '대기' ? 'bg-amber-500 text-white'
                         : 'bg-red-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -352,7 +492,7 @@ export default function TransactionSearch() {
             </div>
             <div className="text-left">
               <h3 className="font-semibold text-slate-900">
-                📊 {format(new Date(), 'M월', { locale: ko })} 예상 손익
+                {format(new Date(), 'M월', { locale: ko })} 예상 손익
               </h3>
               <p className="text-sm text-slate-500">클릭하여 상세 보기</p>
             </div>
@@ -367,11 +507,10 @@ export default function TransactionSearch() {
             <div className="text-xs text-slate-500">예상 순이익</div>
           </div>
         </button>
-        
+
         {showForecast && (
           <div className="border-t border-slate-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {/* 예상 수입 */}
               <div className="p-4 bg-green-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
                   <TrendingUp className="w-5 h-5 text-green-600" />
@@ -396,7 +535,6 @@ export default function TransactionSearch() {
                 </div>
               </div>
 
-              {/* 예상 지출 */}
               <div className="p-4 bg-red-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
                   <ArrowUpCircle className="w-5 h-5 text-red-600" />
@@ -405,23 +543,8 @@ export default function TransactionSearch() {
                 <div className="text-2xl font-bold text-red-700 mb-2">
                   {formatCurrency(monthlyExpenses.reduce((sum, e) => sum + e.amount, 0))}
                 </div>
-                <div className="space-y-1 text-sm">
-                  {(() => {
-                    const grouped: { [key: string]: number } = {};
-                    monthlyExpenses.forEach(e => {
-                      grouped[e.category] = (grouped[e.category] || 0) + e.amount;
-                    });
-                    return Object.entries(grouped).slice(0, 3).map(([cat, amount]) => (
-                      <div key={cat} className="flex justify-between">
-                        <span className="text-red-600">{cat}</span>
-                        <span className="font-medium text-red-700">{formatCurrency(amount)}</span>
-                      </div>
-                    ));
-                  })()}
-                </div>
               </div>
 
-              {/* 예상 순이익 */}
               <div className={`p-4 rounded-xl ${
                 (monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0
                   ? 'bg-blue-50' : 'bg-red-50'
@@ -436,22 +559,7 @@ export default function TransactionSearch() {
                 }`}>
                   {formatCurrency(monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0))}
                 </div>
-                <div className="text-sm text-slate-600">
-                  <div className="flex justify-between">
-                    <span>청구 건수</span>
-                    <span className="font-medium">{monthlyBillings.length}건</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span>지출 건수</span>
-                    <span className="font-medium">{monthlyExpenses.length}건</span>
-                  </div>
-                </div>
               </div>
-            </div>
-
-            <div className="mt-4 p-3 bg-slate-100 rounded-lg text-sm text-slate-600">
-              💡 <strong>예상 손익</strong>은 이번 달 청구된 금액(입금 대기 + 완료)에서 지출을 뺀 값입니다.
-              실제 수입은 입금 완료된 금액만 포함됩니다.
             </div>
           </div>
         )}
@@ -530,7 +638,7 @@ export default function TransactionSearch() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        t.status === '완료' ? 'bg-green-100 text-green-700' 
+                        t.status === '완료' ? 'bg-green-100 text-green-700'
                           : t.status === '대기' ? 'bg-amber-100 text-amber-700'
                           : 'bg-red-100 text-red-700'
                       }`}>
@@ -545,7 +653,304 @@ export default function TransactionSearch() {
           </table>
         </div>
       </div>
+    </>
+  );
+
+  // 보증금 현황 탭 컨텐츠
+  const renderDepositsTab = () => (
+    <>
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="card p-5 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-blue-200 rounded-lg">
+              <Wallet className="w-5 h-5 text-blue-700" />
+            </div>
+            <span className="text-sm font-medium text-blue-700">총 보유 보증금</span>
+          </div>
+          <div className="text-2xl font-bold text-blue-800">{formatCurrency(depositStats.totalHolding)}</div>
+          <div className="text-xs text-blue-600 mt-1">{depositStats.holding.length}건</div>
+        </div>
+
+        <div className="card p-5 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-green-200 rounded-lg">
+              <CheckCircle2 className="w-5 h-5 text-green-700" />
+            </div>
+            <span className="text-sm font-medium text-green-700">입금 완료</span>
+          </div>
+          <div className="text-2xl font-bold text-green-800">{formatCurrency(depositStats.totalHolding)}</div>
+          <div className="text-xs text-green-600 mt-1">{depositStats.holding.length}건</div>
+        </div>
+
+        <div className="card p-5 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-amber-200 rounded-lg">
+              <Clock className="w-5 h-5 text-amber-700" />
+            </div>
+            <span className="text-sm font-medium text-amber-700">입금 대기</span>
+          </div>
+          <div className="text-2xl font-bold text-amber-800">{formatCurrency(depositStats.totalPending)}</div>
+          <div className="text-xs text-amber-600 mt-1">{depositStats.pending.length}건</div>
+        </div>
+
+        <div className="card p-5 bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-violet-200 rounded-lg">
+              <RefreshCw className="w-5 h-5 text-violet-700" />
+            </div>
+            <span className="text-sm font-medium text-violet-700">전환 예정</span>
+          </div>
+          <div className="text-2xl font-bold text-violet-800">{formatCurrency(depositStats.totalConversionPending)}</div>
+          <div className="text-xs text-violet-600 mt-1">{depositStats.conversionPending.length}건 (계약종료 도래)</div>
+        </div>
+      </div>
+
+      {/* 안내 문구 */}
+      <div className="p-4 bg-slate-100 rounded-xl text-sm text-slate-600">
+        <strong>보증금은 예수금(부채)</strong>으로 계약 종료 시 반환하거나 사용료로 전환됩니다.
+        조회 시점: {format(new Date(), 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+      </div>
+
+      {/* 보증금 목록 테이블 */}
+      <div className="card">
+        <div className="p-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="font-semibold text-slate-900">보증금 상세 목록</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">호실</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">입주사</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-500">보증금액</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">입금일</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">계약종료</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">상태</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  </td>
+                </tr>
+              ) : [...depositStats.holding, ...depositStats.pending].length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    보증금 내역이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                [...depositStats.holding, ...depositStats.pending].map((d) => {
+                  const contract = contracts.find(c =>
+                    c.tenant_id === d.tenant_id && c.room_id === d.room_id
+                  );
+                  const isConversionPending = depositStats.conversionPending.some(cp => cp.id === d.id);
+
+                  return (
+                    <tr key={d.id} className="hover:bg-slate-50">
+                      <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                        {d.room_number ? `${d.room_number}호` : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-slate-900">{d.company_name || '-'}</td>
+                      <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                        {formatCurrency(d.amount)}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600">
+                        {d.status === '완료' && d.transaction_date
+                          ? format(new Date(d.transaction_date), 'yy.MM.dd')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center text-sm text-slate-600">
+                        {contract?.end_date
+                          ? format(new Date(contract.end_date), 'yy.MM.dd')
+                          : '-'}
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        {d.status === '대기' ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                            <Clock className="w-3 h-3" />
+                            입금대기
+                          </span>
+                        ) : isConversionPending ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
+                            <RefreshCw className="w-3 h-3" />
+                            전환예정
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                            <CheckCircle2 className="w-3 h-3" />
+                            보유중
+                          </span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+
+  // 미수금 현황 탭 컨텐츠
+  const renderReceivablesTab = () => (
+    <>
+      {/* 요약 카드 */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="card p-5 bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-orange-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-orange-700" />
+            </div>
+            <span className="text-sm font-medium text-orange-700">총 미수금</span>
+          </div>
+          <div className="text-2xl font-bold text-orange-800">{formatCurrency(receivablesStats.totalUnpaid)}</div>
+          <div className="text-xs text-orange-600 mt-1">{receivablesStats.unpaid.length}건</div>
+        </div>
+
+        <div className="card p-5 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-amber-200 rounded-lg">
+              <Clock className="w-5 h-5 text-amber-700" />
+            </div>
+            <span className="text-sm font-medium text-amber-700">이번 달 미입금</span>
+          </div>
+          <div className="text-2xl font-bold text-amber-800">{formatCurrency(receivablesStats.totalCurrentMonth)}</div>
+          <div className="text-xs text-amber-600 mt-1">{receivablesStats.currentMonthUnpaid.length}건</div>
+        </div>
+
+        <div className="card p-5 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+          <div className="flex items-center gap-3 mb-2">
+            <div className="p-2 bg-red-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-red-700" />
+            </div>
+            <span className="text-sm font-medium text-red-700">연체</span>
+          </div>
+          <div className="text-2xl font-bold text-red-800">{formatCurrency(receivablesStats.totalOverdue)}</div>
+          <div className="text-xs text-red-600 mt-1">{receivablesStats.overdue.length}건 (이전 달 미입금)</div>
+        </div>
+      </div>
+
+      {/* 안내 문구 */}
+      <div className="p-4 bg-slate-100 rounded-xl text-sm text-slate-600">
+        <strong>미수금</strong>은 청구되었으나 아직 입금되지 않은 금액입니다.
+        조회 시점: {format(new Date(), 'yyyy년 M월 d일 HH:mm', { locale: ko })}
+      </div>
+
+      {/* 미수금 목록 테이블 */}
+      <div className="card">
+        <div className="p-4 border-b border-slate-200 bg-slate-50">
+          <h3 className="font-semibold text-slate-900">미입금 청구 목록</h3>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead className="bg-slate-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">청구월</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">호실</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">입주사</th>
+                <th className="px-4 py-3 text-right text-sm font-medium text-slate-500">청구금액</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">납부일</th>
+                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">상태</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  </td>
+                </tr>
+              ) : receivablesStats.unpaid.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                    미수금이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                receivablesStats.unpaid
+                  .sort((a, b) => a.year_month.localeCompare(b.year_month))
+                  .map((b) => {
+                    const isOverdue = receivablesStats.overdue.some(o => o.id === b.id);
+                    return (
+                      <tr key={b.id} className={`hover:bg-slate-50 ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                          {b.year_month}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-900">
+                          {b.room_number ? `${b.room_number}호` : '-'}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-slate-900">{b.company_name || '-'}</td>
+                        <td className="px-4 py-3 text-right font-semibold text-slate-900">
+                          {formatCurrency(b.amount)}
+                        </td>
+                        <td className="px-4 py-3 text-center text-sm text-slate-600">
+                          매월 10일
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          {isOverdue ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                              <AlertCircle className="w-3 h-3" />
+                              연체
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
+                              <Clock className="w-3 h-3" />
+                              대기
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <div className="space-y-6">
+      {/* 헤더 */}
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-slate-900">거래/현황 조회</h1>
+        <div className="flex items-center gap-3">
+          {activeTab === 'transactions' && (
+            <>
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="btn btn-secondary flex items-center gap-2"
+              >
+                <Filter className="w-4 h-4" />
+                필터 {showFilters ? '숨기기' : '보기'}
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="btn btn-primary flex items-center gap-2"
+                disabled={transactions.length === 0}
+              >
+                <Download className="w-4 h-4" />
+                엑셀 다운로드
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* 탭 */}
+      {renderTabs()}
+
+      {/* 탭 컨텐츠 */}
+      {activeTab === 'transactions' && renderTransactionsTab()}
+      {activeTab === 'deposits' && renderDepositsTab()}
+      {activeTab === 'receivables' && renderReceivablesTab()}
     </div>
   );
 }
-

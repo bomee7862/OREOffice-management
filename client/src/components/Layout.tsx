@@ -1,17 +1,16 @@
 import { ReactNode } from 'react';
 import { NavLink } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Building2, 
-  Users, 
-  FileText, 
-  Receipt, 
-  Calculator,
+import {
+  LayoutDashboard,
+  Building2,
+  Users,
+  FileText,
   Building,
   ArrowDownCircle,
   ArrowUpCircle,
   Search,
-  FileBarChart
+  ClipboardList,
+  TrendingUp
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -26,8 +25,10 @@ const navItems = [
   { type: 'divider', label: '재무 관리' },
   { path: '/income', icon: ArrowDownCircle, label: '수입 관리' },
   { path: '/expense', icon: ArrowUpCircle, label: '지출 관리' },
-  { path: '/search', icon: Search, label: '거래 조회' },
-  { path: '/report', icon: FileBarChart, label: '기간별 손익' },
+  { path: '/search', icon: Search, label: '거래/현황 조회' },
+  { type: 'divider', label: '분석' },
+  { path: '/settlements', icon: ClipboardList, label: '월별 정산' },
+  { path: '/report', icon: TrendingUp, label: '손익 분석' },
 ];
 
 export default function Layout({ children }: LayoutProps) {

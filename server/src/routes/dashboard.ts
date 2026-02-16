@@ -74,14 +74,35 @@ router.get('/', async (req, res) => {
     const occupiedPostBox = await query(`
       SELECT COUNT(*) as count FROM rooms WHERE room_type = 'POST BOX' AND status = '입주'
     `);
-    
+
+    // 호실(상주) 예상 월 매출: 활성 계약의 monthly_rent 합계 (POST BOX 제외)
+    const roomMonthlyRevenue = await query(`
+      SELECT COALESCE(SUM(c.monthly_rent), 0) as total
+      FROM contracts c
+      JOIN rooms r ON c.room_id = r.id
+      WHERE c.is_active = true
+        AND r.room_type != 'POST BOX'
+        AND r.room_type != '회의실'
+        AND r.room_type != '자유석'
+    `);
+
+    // POST BOX(비상주) 예상 월 매출: 활성 계약의 monthly_rent 합계
+    const postboxMonthlyRevenue = await query(`
+      SELECT COALESCE(SUM(c.monthly_rent), 0) as total
+      FROM contracts c
+      JOIN rooms r ON c.room_id = r.id
+      WHERE c.is_active = true
+        AND r.room_type = 'POST BOX'
+    `);
+
     // 보유 보증금 총액 (활성 계약 중 보증금 상태가 '보유'인 것만 합산)
     // 위약금전환, 사용료차감 등으로 전환된 보증금은 제외
     const totalDeposit = await query(`
-      SELECT COALESCE(SUM(deposit), 0) as total
+      SELECT COALESCE(SUM(deposit), 0) as total, COUNT(*) as count
       FROM contracts
-      WHERE is_active = true 
+      WHERE is_active = true
         AND (deposit_status = '보유' OR deposit_status IS NULL)
+        AND deposit > 0
     `);
     
     const occupancyRate = parseInt(totalRooms.rows[0].count) > 0 
@@ -99,7 +120,10 @@ router.get('/', async (req, res) => {
       occupied_rooms: parseInt(occupiedRooms.rows[0].count),
       total_postbox: parseInt(totalPostBox.rows[0].count),
       occupied_postbox: parseInt(occupiedPostBox.rows[0].count),
-      total_deposit: parseInt(totalDeposit.rows[0].total) || 0
+      total_deposit: parseInt(totalDeposit.rows[0].total) || 0,
+      deposit_count: parseInt(totalDeposit.rows[0].count) || 0,
+      room_monthly_revenue: parseInt(roomMonthlyRevenue.rows[0].total) || 0,
+      postbox_monthly_revenue: parseInt(postboxMonthlyRevenue.rows[0].total) || 0
     });
   } catch (error) {
     console.error('대시보드 조회 오류:', error);

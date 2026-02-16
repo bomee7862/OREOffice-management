@@ -9,17 +9,18 @@ router.get('/', async (req, res) => {
     const { active } = req.query;
     
     let sql = `
-      SELECT c.*, 
+      SELECT c.*,
         r.room_number,
         r.room_type,
         t.company_name,
         t.representative_name,
-        t.phone
+        t.phone,
+        t.tenant_type
       FROM contracts c
       JOIN rooms r ON c.room_id = r.id
       JOIN tenants t ON c.tenant_id = t.id
     `;
-    
+
     if (active === 'true') {
       sql += ' WHERE c.is_active = true';
     }
@@ -39,7 +40,7 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await query(`
-      SELECT c.*, 
+      SELECT c.*,
         r.room_number,
         r.room_type,
         r.base_price,
@@ -47,7 +48,8 @@ router.get('/:id', async (req, res) => {
         t.representative_name,
         t.business_number,
         t.email,
-        t.phone
+        t.phone,
+        t.tenant_type
       FROM contracts c
       JOIN rooms r ON c.room_id = r.id
       JOIN tenants t ON c.tenant_id = t.id

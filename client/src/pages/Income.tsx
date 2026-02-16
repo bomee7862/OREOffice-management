@@ -635,7 +635,7 @@ export default function Income() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -648,11 +648,11 @@ export default function Income() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">💰 수입 관리</h1>
+        <h1 className="text-xl font-bold text-slate-900">💰 수입 관리</h1>
         <div className="flex items-center gap-3">
           <button
             onClick={handleGenerateBillings}
-            className="btn btn-secondary flex items-center gap-2"
+            className="btn-secondary flex items-center gap-2"
           >
             <RefreshCw className="w-4 h-4" />
             입금관리
@@ -666,7 +666,7 @@ export default function Income() {
           <button onClick={prevMonth} className="p-2 hover:bg-slate-100 rounded-lg">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-bold text-slate-900 min-w-[150px] text-center">
+          <h2 className="text-lg font-bold text-slate-900 min-w-[150px] text-center">
             📅 {format(currentDate, 'yyyy년 M월', { locale: ko })}
           </h2>
           <button onClick={nextMonth} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -683,22 +683,22 @@ export default function Income() {
               <AlertCircle className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-amber-600 font-medium">입금 대기</p>
-              <p className="text-2xl font-bold text-amber-700">{pendingBillings.length}건</p>
-              <p className="text-sm text-amber-600">{formatCurrency(pendingTotal)}</p>
+              <p className="text-sm text-slate-700 font-medium">입금 대기</p>
+              <p className="text-xl font-bold text-slate-900">{pendingBillings.length}건</p>
+              <p className="text-sm text-slate-600">{formatCurrency(pendingTotal)}</p>
             </div>
           </div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-green-50 to-emerald-100 border-green-300 shadow-md">
+        <div className="card p-5 bg-gradient-to-br from-teal-50 to-teal-100 border-teal-300 shadow-md">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-green-500 rounded-xl">
+            <div className="p-3 bg-teal-500 rounded-xl">
               <CheckCircle2 className="w-6 h-6 text-white" />
             </div>
             <div>
-              <p className="text-sm text-green-700 font-semibold">💰 이달 실수입</p>
-              <p className="text-2xl font-bold text-green-800">{formatCurrency(totalCompleted)}</p>
-              <p className="text-sm text-green-600">{completedBillings.length + postboxIncome.length + penaltyIncome.length + depositConversionIncome.length + oneTimeIncome.length}건 입금 완료</p>
+              <p className="text-sm text-slate-700 font-semibold">💰 이달 실수입</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency(totalCompleted)}</p>
+              <p className="text-sm text-slate-600">{completedBillings.length + postboxIncome.length + penaltyIncome.length + depositConversionIncome.length + oneTimeIncome.length}건 입금 완료</p>
             </div>
           </div>
         </div>
@@ -709,22 +709,22 @@ export default function Income() {
               <AlertTriangle className="w-6 h-6 text-orange-600" />
             </div>
             <div>
-              <p className="text-sm text-orange-600 font-medium">위약금/전환/기타</p>
-              <p className="text-2xl font-bold text-orange-700">{penaltyIncome.length + depositConversionIncome.length + oneTimeIncome.length}건</p>
-              <p className="text-sm text-orange-600">{formatCurrency(penaltyTotal + depositConversionTotal + oneTimeTotal)}</p>
+              <p className="text-sm text-slate-700 font-medium">위약금/전환/기타</p>
+              <p className="text-xl font-bold text-slate-900">{penaltyIncome.length + depositConversionIncome.length + oneTimeIncome.length}건</p>
+              <p className="text-sm text-slate-600">{formatCurrency(penaltyTotal + depositConversionTotal + oneTimeTotal)}</p>
             </div>
           </div>
         </div>
 
-        <div className="card p-5 bg-blue-50 border-blue-200">
+        <div className="card p-5 bg-primary-50 border-primary-200">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-blue-100 rounded-xl">
-              <CreditCard className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-primary-100 rounded-xl">
+              <CreditCard className="w-6 h-6 text-primary-600" />
             </div>
             <div>
-              <p className="text-sm text-blue-600 font-medium">이달 총 예상</p>
-              <p className="text-2xl font-bold text-blue-700">{formatCurrency(totalExpected)}</p>
-              <p className="text-sm text-blue-500">입주 {occupiedRooms.length}호실 기준</p>
+              <p className="text-sm text-primary-600 font-medium">이달 총 예상</p>
+              <p className="text-xl font-bold text-primary-700">{formatCurrency(totalExpected)}</p>
+              <p className="text-sm text-primary-500">입주 {occupiedRooms.length}호실 기준</p>
             </div>
           </div>
         </div>
@@ -732,25 +732,25 @@ export default function Income() {
 
       {/* 일괄 처리 버튼 */}
       {selectedPendingCount > 0 && (
-        <div className="card p-4 bg-blue-50 border-blue-200">
+        <div className="card p-4 bg-primary-50 border-primary-200">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-blue-600" />
-              <span className="font-medium text-blue-800">
+              <CheckSquare className="w-5 h-5 text-primary-600" />
+              <span className="font-medium text-primary-800">
                 {selectedPendingCount}건 선택됨 ({formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))})
               </span>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={() => openTaxInvoiceModal()}
-                className="btn btn-secondary flex items-center gap-2"
+                className="btn-secondary flex items-center gap-2"
               >
                 <FileText className="w-4 h-4" />
                 일괄 세금계산서
               </button>
               <button
                 onClick={() => openConfirmModal()}
-                className="btn btn-primary flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
               >
                 <Check className="w-4 h-4" />
                 일괄 입금 확인
@@ -770,7 +770,7 @@ export default function Income() {
           {pendingBillings.length > 0 && (
             <button
               onClick={() => toggleSelectAll(pendingBillings)}
-              className="text-sm text-amber-700 hover:text-amber-800 flex items-center gap-1"
+              className="text-sm text-slate-700 hover:text-slate-800 flex items-center gap-1"
             >
               {pendingBillings.every(b => selectedIds.includes(b.id)) ? (
                 <>
@@ -807,8 +807,8 @@ export default function Income() {
                 const getStatusInfo = () => {
                   if (isNotGenerated) return { label: '미입금', color: 'bg-slate-100 text-slate-600', icon: '⚪' };
                   if (isCompleted && billing?.tax_invoice_issued) return { label: '세금계산서', color: 'bg-purple-100 text-purple-700', icon: '📄' };
-                  if (isCompleted) return { label: '완료', color: 'bg-green-100 text-green-700', icon: '✅' };
-                  if (isOverdue) return { label: '연체', color: 'bg-red-100 text-red-700', icon: '🔴' };
+                  if (isCompleted) return { label: '완료', color: 'bg-teal-100 text-teal-700', icon: '✅' };
+                  if (isOverdue) return { label: '연체', color: 'bg-rose-100 text-rose-700', icon: '🔴' };
                   if (isPending) return { label: '대기', color: 'bg-amber-100 text-amber-700', icon: '🟡' };
                   return { label: '-', color: 'bg-slate-100 text-slate-600', icon: '' };
                 };
@@ -821,7 +821,7 @@ export default function Income() {
                     {billing && isPending ? (
                       <button onClick={() => toggleSelect(billing.id)} className="p-1">
                         {selectedIds.includes(billing.id) ? (
-                          <CheckSquare className="w-5 h-5 text-blue-600" />
+                          <CheckSquare className="w-5 h-5 text-primary-600" />
                         ) : (
                           <Square className="w-5 h-5 text-slate-400" />
                         )}
@@ -832,21 +832,19 @@ export default function Income() {
 
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        isCompleted ? 'bg-green-100' : isOverdue ? 'bg-red-100' : isPending ? 'bg-amber-100' : 'bg-slate-100'
+                        isCompleted ? 'bg-teal-100' : isOverdue ? 'bg-rose-100' : isPending ? 'bg-amber-100' : 'bg-slate-100'
                       }`}>
-                        <span className={`text-sm font-bold ${
-                          isCompleted ? 'text-green-700' : isOverdue ? 'text-red-700' : isPending ? 'text-amber-700' : 'text-slate-500'
-                        }`}>{room.room_number}</span>
+                        <span className="text-sm font-bold text-slate-900">{room.room_number}</span>
                       </div>
                       <div className="flex-1">
                         <div className="font-medium text-slate-900">{room.company_name || '-'}</div>
                         <div className="text-sm text-slate-500 flex items-center gap-3 flex-wrap">
                           <span>📅 매월 {room.payment_day || 10}일</span>
                           {isCompleted && billing?.payment_date && (
-                            <span className="text-green-600">입금: {format(new Date(billing.payment_date), 'M/d')}</span>
+                            <span className="text-slate-600">입금: {format(new Date(billing.payment_date), 'M/d')}</span>
                           )}
                           {(isPending || isOverdue) && billing?.due_date && (
-                            <span className={isOverdue ? 'text-red-600' : 'text-amber-600'}>
+                            <span className="text-slate-600">
                               납부기한: {format(new Date(billing.due_date), 'M/d')}
                             </span>
                           )}
@@ -868,7 +866,7 @@ export default function Income() {
                       {isNotGenerated && (
                         <button
                           onClick={() => handleCreateSingleBilling(room.id, room.room_number)}
-                          className="btn btn-secondary flex items-center gap-1 text-sm"
+                          className="btn-secondary flex items-center gap-1 text-sm"
                         >
                           <Plus className="w-4 h-4" />
                           입금관리
@@ -880,7 +878,7 @@ export default function Income() {
                           {!billing.tax_invoice_issued && (
                             <button
                               onClick={() => openTaxInvoiceModal(billing)}
-                              className="btn btn-secondary text-xs px-2 py-1"
+                              className="btn-secondary btn-sm"
                               title="세금계산서 발행"
                             >
                               <FileText className="w-4 h-4" />
@@ -888,7 +886,7 @@ export default function Income() {
                           )}
                           <button
                             onClick={() => openConfirmModal(billing)}
-                            className={`btn flex items-center gap-1 ${isOverdue ? 'btn-primary bg-red-600 hover:bg-red-700' : 'btn-primary'}`}
+                            className={`flex items-center gap-1 ${isOverdue ? 'btn-danger' : 'btn-primary'}`}
                           >
                             <Check className="w-4 h-4" />
                             입금 확인
@@ -916,7 +914,7 @@ export default function Income() {
                           </button>
                           <button
                             onClick={() => handleCancelPayment(billing)}
-                            className="p-1.5 hover:bg-red-100 rounded-lg text-red-500"
+                            className="p-1.5 hover:bg-rose-100 rounded-lg text-rose-500"
                             title="입금 취소"
                           >
                             <X className="w-4 h-4" />
@@ -940,15 +938,15 @@ export default function Income() {
               </div>
               <div className="h-8 w-px bg-amber-300"></div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-green-600">✅ 입금 확인:</span>
-                <span className="text-lg font-bold text-green-700">{formatCurrency(completedBillingTotal)}</span>
-                <span className="text-sm text-green-600">({completedBillings.length}개 호실)</span>
+                <span className="text-sm text-slate-600">✅ 입금 확인:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(completedBillingTotal)}</span>
+                <span className="text-sm text-slate-600">({completedBillings.length}개 호실)</span>
               </div>
               <div className="h-8 w-px bg-amber-300"></div>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-amber-600">⏳ 미입금:</span>
-                <span className="text-lg font-bold text-amber-700">{formatCurrency(unpaidTotal)}</span>
-                <span className="text-sm text-amber-600">({unpaidRooms.length}개 호실)</span>
+                <span className="text-sm text-slate-600">⏳ 미입금:</span>
+                <span className="text-lg font-bold text-slate-900">{formatCurrency(unpaidTotal)}</span>
+                <span className="text-sm text-slate-600">({unpaidRooms.length}개 호실)</span>
               </div>
             </div>
           </div>
@@ -958,19 +956,19 @@ export default function Income() {
       {/* 📬 비상주 사용료 (POST BOX) */}
       {postboxIncome.length > 0 && (
         <div className="card">
-          <div className="p-4 border-b border-slate-200 bg-violet-50">
+          <div className="p-4 border-b border-slate-200 bg-coral-50">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Mailbox className="w-5 h-5 text-violet-600" />
+              <Mailbox className="w-5 h-5 text-coral-600" />
               📬 비상주 사용료 ({postboxIncome.length}건)
-              <span className="text-sm font-normal text-violet-600 ml-2">* 계약 시작월 자동 생성</span>
+              <span className="text-sm font-normal text-slate-500 ml-2">* 계약 시작월 자동 생성</span>
             </h3>
           </div>
           <div className="divide-y divide-slate-100">
             {postboxIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-violet-100 rounded-xl flex items-center justify-center">
-                    <Mailbox className="w-6 h-6 text-violet-600" />
+                  <div className="w-12 h-12 bg-coral-100 rounded-xl flex items-center justify-center">
+                    <Mailbox className="w-6 h-6 text-coral-600" />
                   </div>
                   <div>
                     <div className="font-medium text-slate-900">
@@ -982,7 +980,7 @@ export default function Income() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-violet-600">{formatCurrency(transaction.amount)}</span>
+                  <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
                     <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
@@ -1004,7 +1002,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1022,7 +1020,7 @@ export default function Income() {
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-orange-600" />
               ⚠️ 위약금 ({penaltyIncome.length}건)
-              <span className="text-sm font-normal text-orange-600 ml-2">* 중도종료 시 자동 생성</span>
+              <span className="text-sm font-normal text-slate-500 ml-2">* 중도종료 시 자동 생성</span>
             </h3>
           </div>
           <div className="divide-y divide-slate-100">
@@ -1042,7 +1040,7 @@ export default function Income() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-orange-600">{formatCurrency(transaction.amount)}</span>
+                  <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
                     <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
@@ -1064,7 +1062,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1082,7 +1080,7 @@ export default function Income() {
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <RefreshCw className="w-5 h-5 text-teal-600" />
               🔄 사용료전환 ({depositConversionIncome.length}건)
-              <span className="text-sm font-normal text-teal-600 ml-2">* 만기종료 시 보증금→사용료 전환</span>
+              <span className="text-sm font-normal text-slate-500 ml-2">* 만기종료 시 보증금→사용료 전환</span>
             </h3>
           </div>
           <div className="divide-y divide-slate-100">
@@ -1102,7 +1100,7 @@ export default function Income() {
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-teal-600">{formatCurrency(transaction.amount)}</span>
+                  <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
                     <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
@@ -1124,7 +1122,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1145,21 +1143,21 @@ export default function Income() {
           <div className="flex gap-2">
             <button
               onClick={() => openAddModal('회의실')}
-              className="btn btn-secondary text-sm flex items-center gap-1"
+              className="btn-secondary text-sm flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               회의실
             </button>
             <button
               onClick={() => openAddModal('1day')}
-              className="btn btn-secondary text-sm flex items-center gap-1"
+              className="btn-secondary text-sm flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               1day
             </button>
             <button
               onClick={() => openAddModal('기타')}
-              className="btn btn-secondary text-sm flex items-center gap-1"
+              className="btn-secondary text-sm flex items-center gap-1"
             >
               <Plus className="w-4 h-4" />
               기타
@@ -1188,8 +1186,8 @@ export default function Income() {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="font-bold text-cyan-600">{formatCurrency(transaction.amount)}</span>
-                  <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-full text-xs font-medium">
+                  <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
+                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1203,18 +1201,18 @@ export default function Income() {
       {/* 🏦 예수금(보증금) 관리 */}
       {(deposits.length > 0 || pendingConversions.length > 0) && (
         <div className="card">
-          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-violet-50">
+          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-coral-50">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <Landmark className="w-5 h-5 text-indigo-600" />
               🏦 예수금(보증금) 관리
-              <span className="text-sm font-normal text-indigo-600 ml-2">* 손익 미반영 (부채)</span>
+              <span className="text-sm font-normal text-slate-500 ml-2">* 손익 미반영 (부채)</span>
             </h3>
           </div>
           
           {/* 입금 대기 보증금 */}
           {deposits.length > 0 && (
             <div className="p-4 border-b border-slate-100">
-              <h4 className="text-sm font-semibold text-amber-700 mb-3 flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4" />
                 입금 대기 ({deposits.length}건)
               </h4>
@@ -1236,13 +1234,13 @@ export default function Income() {
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
-                      <span className="font-bold text-amber-700">{formatCurrency(deposit.amount)}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(deposit.amount)}</span>
                       <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                         🟡 대기
                       </span>
                       <button
                         onClick={() => openDepositConfirmModal(deposit)}
-                        className="btn btn-primary text-sm px-3 py-1.5"
+                        className="btn-primary btn-sm"
                       >
                         입금 확인
                       </button>
@@ -1256,10 +1254,10 @@ export default function Income() {
           {/* 사용료 전환 대기 (계약 종료월) */}
           {pendingConversions.length > 0 && (
             <div className="p-4">
-              <h4 className="text-sm font-semibold text-teal-700 mb-3 flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
                 <ArrowRightLeft className="w-4 h-4" />
                 사용료 전환 대기 ({pendingConversions.length}건)
-                <span className="text-xs font-normal text-teal-600">- 계약 종료월</span>
+                <span className="text-xs font-normal text-slate-500">- 계약 종료월</span>
               </h4>
               <div className="space-y-2">
                 {pendingConversions.map((deposit) => (
@@ -1282,9 +1280,9 @@ export default function Income() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <span className="font-bold text-teal-700">{formatCurrency(deposit.amount)}</span>
+                        <span className="font-bold text-slate-900">{formatCurrency(deposit.amount)}</span>
                         {deposit.tax_invoice_issued && (
-                          <div className="text-xs text-purple-600 flex items-center gap-1 justify-end">
+                          <div className="text-xs text-slate-500 flex items-center gap-1 justify-end">
                             <FileText className="w-3 h-3" />
                             세금계산서 발행됨
                           </div>
@@ -1292,7 +1290,7 @@ export default function Income() {
                       </div>
                       <button
                         onClick={() => openConversionModal(deposit)}
-                        className="btn text-sm px-3 py-1.5 bg-teal-600 hover:bg-teal-700 text-white"
+                        className="btn-primary btn-sm"
                       >
                         사용료 전환
                       </button>
@@ -1327,7 +1325,7 @@ export default function Income() {
                       {selectedBilling.room_number}호 | {selectedBilling.company_name}
                     </div>
                     <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-lg font-bold" style={{ color: '#8fb300' }}>
+                      <span className="text-lg font-bold text-slate-700">
                         {formatCurrency(selectedBilling.amount)}
                       </span>
                       <span className="text-sm text-slate-500">
@@ -1337,8 +1335,8 @@ export default function Income() {
                   </div>
 
                   {/* 실제 납부 */}
-                  <div className="p-4 bg-green-50 rounded-xl space-y-3">
-                    <div className="text-sm font-medium text-green-800">💰 실제 납부</div>
+                  <div className="p-4 bg-teal-50 rounded-xl space-y-3">
+                    <div className="text-sm font-medium text-slate-700">💰 실제 납부</div>
                     
                     {/* 빠른 선택 버튼 */}
                     <div className="flex gap-2">
@@ -1350,8 +1348,8 @@ export default function Income() {
                         }}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'vat_included'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
                         }`}
                       >
                         VAT 포함
@@ -1365,8 +1363,8 @@ export default function Income() {
                         }}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'vat_excluded'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
                         }`}
                       >
                         VAT 제외
@@ -1376,8 +1374,8 @@ export default function Income() {
                         onClick={() => setPaymentMode('custom')}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'custom'
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white border border-green-300 text-green-700 hover:bg-green-100'
+                            ? 'bg-teal-600 text-white'
+                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
                         }`}
                       >
                         직접 입력
@@ -1386,7 +1384,7 @@ export default function Income() {
 
                     {/* 납부액 입력 */}
                     <div>
-                      <label className="label text-green-800">납부액</label>
+                      <label className="label text-slate-700">납부액</label>
                       <input
                         type="number"
                         value={confirmForm.payment_amount}
@@ -1402,9 +1400,9 @@ export default function Income() {
                     {/* 차액 표시 */}
                     {confirmForm.payment_amount !== selectedBilling.amount && (
                       <div className={`p-2 rounded-lg text-sm ${
-                        confirmForm.payment_amount < selectedBilling.amount 
-                          ? 'bg-amber-100 text-amber-800' 
-                          : 'bg-blue-100 text-blue-800'
+                        confirmForm.payment_amount < selectedBilling.amount
+                          ? 'bg-amber-100 text-slate-700'
+                          : 'bg-primary-100 text-primary-800'
                       }`}>
                         💡 차액: {confirmForm.payment_amount < selectedBilling.amount ? '-' : '+'}
                         {formatCurrency(Math.abs(confirmForm.payment_amount - selectedBilling.amount))}
@@ -1418,13 +1416,13 @@ export default function Income() {
               )}
 
               {bulkMode && (
-                <div className="p-4 bg-blue-50 rounded-xl">
-                  <div className="text-sm text-blue-600">선택된 청구</div>
-                  <div className="font-bold text-blue-700">{selectedPendingCount}건</div>
-                  <div className="text-lg font-bold text-blue-800">
+                <div className="p-4 bg-primary-50 rounded-xl">
+                  <div className="text-sm text-primary-600">선택된 청구</div>
+                  <div className="font-bold text-primary-700">{selectedPendingCount}건</div>
+                  <div className="text-lg font-bold text-primary-800">
                     {formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))}
                   </div>
-                  <p className="text-xs text-blue-600 mt-2">* 일괄 처리 시 청구액 그대로 입금 처리됩니다.</p>
+                  <p className="text-xs text-primary-600 mt-2">* 일괄 처리 시 청구액 그대로 입금 처리됩니다.</p>
                 </div>
               )}
 
@@ -1468,13 +1466,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={bulkMode ? handleBulkConfirm : handleConfirm}
-                className="btn btn-primary flex-1"
+                className="btn-primary flex-1"
               >
                 {bulkMode ? `${selectedPendingCount}건 입금 확인` : `${formatCurrency(confirmForm.payment_amount)} 입금 확인`}
               </button>
@@ -1499,11 +1497,11 @@ export default function Income() {
             <div className="p-6 space-y-4">
               {!bulkMode && selectedBilling && (
                 <div className="p-4 bg-purple-50 rounded-xl">
-                  <div className="text-sm text-purple-600">청구 정보</div>
+                  <div className="text-sm text-slate-500">청구 정보</div>
                   <div className="font-medium text-slate-900">
                     {selectedBilling.room_number}호 | {selectedBilling.company_name}
                   </div>
-                  <div className="text-lg font-bold text-purple-700">
+                  <div className="text-lg font-bold text-slate-900">
                     {formatCurrency(selectedBilling.amount)}
                   </div>
                 </div>
@@ -1511,8 +1509,8 @@ export default function Income() {
 
               {bulkMode && (
                 <div className="p-4 bg-purple-50 rounded-xl">
-                  <div className="text-sm text-purple-600">선택된 청구</div>
-                  <div className="font-bold text-purple-700">{selectedPendingCount}건</div>
+                  <div className="text-sm text-slate-500">선택된 청구</div>
+                  <div className="font-bold text-slate-900">{selectedPendingCount}건</div>
                 </div>
               )}
 
@@ -1542,13 +1540,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowTaxInvoiceModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={bulkMode ? handleBulkTaxInvoice : handleTaxInvoice}
-                className="btn btn-primary flex-1 bg-purple-600 hover:bg-purple-700"
+                className="btn-primary flex-1"
               >
                 {bulkMode ? `${selectedPendingCount}건 발행` : '발행'}
               </button>
@@ -1560,7 +1558,7 @@ export default function Income() {
       {/* 1회성 수입 등록 모달 */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">
                 🎯 {addType === '회의실' ? '회의실' : addType === '1day' ? '1day' : '기타'} 사용 등록
@@ -1681,13 +1679,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowAddModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleAddIncome}
-                className="btn btn-primary flex-1"
+                className="btn-primary flex-1"
                 disabled={!addForm.amount || !addForm.transaction_date}
               >
                 등록
@@ -1712,11 +1710,11 @@ export default function Income() {
             </div>
             <div className="p-6 space-y-4">
               <div className="p-4 bg-purple-50 rounded-xl">
-                <div className="text-sm text-purple-600">거래 정보</div>
+                <div className="text-sm text-slate-500">거래 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedTransaction.room_number || '-'} | {selectedTransaction.company_name || '-'}
                 </div>
-                <div className="text-lg font-bold text-purple-700">
+                <div className="text-lg font-bold text-slate-900">
                   {formatCurrency(selectedTransaction.amount)}
                 </div>
                 <div className="text-sm text-slate-500 mt-1">
@@ -1748,13 +1746,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowTransactionTaxModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleTransactionTaxInvoice}
-                className="btn btn-primary flex-1 bg-purple-600 hover:bg-purple-700"
+                className="btn-primary flex-1"
               >
                 발행
               </button>
@@ -1781,7 +1779,7 @@ export default function Income() {
                 <div className="font-medium text-slate-900">
                   {selectedBilling.room_number}호 | {selectedBilling.company_name}
                 </div>
-                <div className="text-lg font-bold" style={{ color: '#8fb300' }}>
+                <div className="text-lg font-bold text-slate-700">
                   {formatCurrency(selectedBilling.amount)}
                 </div>
               </div>
@@ -1841,13 +1839,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowBillingEditModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleBillingEdit}
-                className="btn btn-primary flex-1"
+                className="btn-primary flex-1"
               >
                 저장
               </button>
@@ -1927,13 +1925,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowTransactionEditModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleTransactionEdit}
-                className="btn btn-primary flex-1"
+                className="btn-primary flex-1"
               >
                 저장
               </button>
@@ -1957,11 +1955,11 @@ export default function Income() {
             </div>
             <div className="p-6 space-y-4">
               <div className="p-4 bg-indigo-50 rounded-xl">
-                <div className="text-sm text-indigo-600">보증금 정보</div>
+                <div className="text-sm text-slate-500">보증금 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedDeposit.room_number}호 | {selectedDeposit.company_name}
                 </div>
-                <div className="text-xl font-bold text-indigo-700 mt-1">
+                <div className="text-xl font-bold text-slate-900 mt-1">
                   {formatCurrency(selectedDeposit.amount)}
                 </div>
               </div>
@@ -1997,13 +1995,13 @@ export default function Income() {
                     onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, issue_tax_invoice: e.target.checked }))}
                     className="w-4 h-4 text-purple-600 rounded"
                   />
-                  <span className="font-medium text-purple-800">📄 세금계산서 발행</span>
+                  <span className="font-medium text-slate-700">📄 세금계산서 발행</span>
                 </label>
                 
                 {depositConfirmForm.issue_tax_invoice && (
                   <div className="space-y-3 pt-2 border-t border-purple-200">
                     <div>
-                      <label className="label text-purple-700">발행일</label>
+                      <label className="label text-slate-700">발행일</label>
                       <input
                         type="date"
                         value={depositConfirmForm.tax_invoice_date}
@@ -2012,7 +2010,7 @@ export default function Income() {
                       />
                     </div>
                     <div>
-                      <label className="label text-purple-700">세금계산서 번호 (선택)</label>
+                      <label className="label text-slate-700">세금계산서 번호 (선택)</label>
                       <input
                         type="text"
                         value={depositConfirmForm.tax_invoice_number}
@@ -2028,13 +2026,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowDepositConfirmModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleDepositConfirm}
-                className="btn btn-primary flex-1 bg-indigo-600 hover:bg-indigo-700"
+                className="btn-primary flex-1"
               >
                 입금 확인
               </button>
@@ -2058,11 +2056,11 @@ export default function Income() {
             </div>
             <div className="p-6 space-y-4">
               <div className="p-4 bg-teal-50 rounded-xl">
-                <div className="text-sm text-teal-600">전환 정보</div>
+                <div className="text-sm text-slate-500">전환 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedDeposit.room_number}호 | {selectedDeposit.company_name}
                 </div>
-                <div className="text-xl font-bold text-teal-700 mt-1">
+                <div className="text-xl font-bold text-slate-900 mt-1">
                   {formatCurrency(selectedDeposit.amount)}
                 </div>
                 <div className="text-sm text-slate-500 mt-2">
@@ -2074,15 +2072,15 @@ export default function Income() {
               {/* 세금계산서 정보 표시 (기존 발행 정보) */}
               {selectedDeposit.tax_invoice_issued && (
                 <div className="p-4 bg-purple-50 rounded-xl">
-                  <div className="flex items-center gap-2 text-purple-700 font-medium">
+                  <div className="flex items-center gap-2 text-slate-700 font-medium">
                     <FileText className="w-4 h-4" />
                     세금계산서 발행됨
                   </div>
-                  <div className="text-sm text-purple-600 mt-1">
+                  <div className="text-sm text-slate-600 mt-1">
                     발행일: {selectedDeposit.tax_invoice_date ? format(new Date(selectedDeposit.tax_invoice_date), 'yyyy.MM.dd') : '-'}
                     {selectedDeposit.tax_invoice_number && ` | 번호: ${selectedDeposit.tax_invoice_number}`}
                   </div>
-                  <div className="text-xs text-purple-500 mt-2">
+                  <div className="text-xs text-slate-500 mt-2">
                     * 보증금 입금 시 발행된 세금계산서 정보가 유지됩니다.
                   </div>
                 </div>
@@ -2102,7 +2100,7 @@ export default function Income() {
               </div>
 
               <div className="p-4 bg-amber-50 rounded-xl">
-                <p className="text-sm text-amber-800">
+                <p className="text-sm text-slate-700">
                   ⚠️ 전환 시 보증금이 해당 월 <strong>사용료 수입</strong>으로 인식됩니다.
                 </p>
               </div>
@@ -2110,13 +2108,13 @@ export default function Income() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={() => setShowConversionModal(false)}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleConversion}
-                className="btn flex-1 bg-teal-600 hover:bg-teal-700 text-white"
+                className="btn-primary flex-1"
               >
                 사용료 전환 확정
               </button>

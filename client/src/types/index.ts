@@ -110,6 +110,7 @@ export interface Contract {
   company_name?: string;
   representative_name?: string;
   phone?: string;
+  tenant_type?: TenantType;
 }
 
 export interface Transaction {
@@ -226,5 +227,8 @@ export interface DashboardSummary {
   total_postbox: number;
   occupied_postbox: number;
   total_deposit: number;
+  deposit_count: number;
+  room_monthly_revenue: number;
+  postbox_monthly_revenue: number;
 }
 

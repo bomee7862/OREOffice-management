@@ -12,7 +12,7 @@ const EXPENSE_CATEGORIES = [
   { value: '임대료', label: '임대료', icon: '🏠', color: 'bg-slate-100 text-slate-600' },
   { value: '관리비', label: '관리비', icon: '🏢', color: 'bg-slate-100 text-slate-600' },
   { value: '공과금', label: '공과금', icon: '💡', color: 'bg-yellow-100 text-yellow-600' },
-  { value: '청소미화', label: '청소/미화', icon: '🧹', color: 'bg-green-100 text-green-600' },
+  { value: '청소미화', label: '청소/미화', icon: '🧹', color: 'bg-teal-100 text-teal-600' },
   { value: '유지보수', label: '유지보수', icon: '🔧', color: 'bg-orange-100 text-orange-600' },
   { value: '소모품', label: '소모품', icon: '📦', color: 'bg-purple-100 text-purple-600' },
   { value: '마케팅', label: '마케팅', icon: '📣', color: 'bg-pink-100 text-pink-600' },
@@ -154,7 +154,7 @@ export default function Expense() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
       </div>
     );
   }
@@ -163,10 +163,10 @@ export default function Expense() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">💸 지출 관리</h1>
+        <h1 className="text-xl font-bold text-slate-900">💸 지출 관리</h1>
         <button
           onClick={() => setShowAddModal(true)}
-          className="btn btn-primary flex items-center gap-2"
+          className="btn-primary flex items-center gap-2"
         >
           <Plus className="w-4 h-4" />
           지출 등록
@@ -179,7 +179,7 @@ export default function Expense() {
           <button onClick={prevMonth} className="p-2 hover:bg-slate-100 rounded-lg">
             <ChevronLeft className="w-5 h-5" />
           </button>
-          <h2 className="text-xl font-bold text-slate-900 min-w-[150px] text-center">
+          <h2 className="text-lg font-bold text-slate-900 min-w-[150px] text-center">
             📅 {format(currentDate, 'yyyy년 M월', { locale: ko })}
           </h2>
           <button onClick={nextMonth} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -190,7 +190,7 @@ export default function Expense() {
 
       {/* 카테고리별 요약 */}
       <div className="card p-6">
-        <h3 className="font-semibold text-slate-900 mb-4">카테고리별 지출</h3>
+        <h3 className="text-base font-semibold text-slate-900 mb-4">카테고리별 지출</h3>
         <div className="space-y-3">
           {categoryTotals.length === 0 ? (
             <div className="text-center text-slate-500 py-4">이번 달 지출 내역이 없습니다.</div>
@@ -209,7 +209,7 @@ export default function Expense() {
         {categoryTotals.length > 0 && (
           <div className="mt-4 pt-4 border-t border-slate-200 flex justify-between items-center">
             <span className="font-semibold text-slate-900">총 지출</span>
-            <span className="text-xl font-bold text-red-600">{formatCurrency(totalExpense)}</span>
+            <span className="text-xl font-bold text-slate-900">{formatCurrency(totalExpense)}</span>
           </div>
         )}
       </div>
@@ -217,24 +217,24 @@ export default function Expense() {
       {/* 지출 내역 테이블 */}
       <div className="card">
         <div className="p-4 border-b border-slate-200">
-          <h3 className="font-semibold text-slate-900">지출 내역 ({transactions.length}건)</h3>
+          <h3 className="text-base font-semibold text-slate-900">지출 내역 ({transactions.length}건)</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50">
+            <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">날짜</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">내용</th>
-                <th className="px-4 py-3 text-left text-sm font-medium text-slate-500">카테고리</th>
-                <th className="px-4 py-3 text-right text-sm font-medium text-slate-500">금액</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">결제방법</th>
-                <th className="px-4 py-3 text-center text-sm font-medium text-slate-500">작업</th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">날짜</th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">내용</th>
+                <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">카테고리</th>
+                <th className="text-right py-4 px-6 text-sm font-medium text-slate-500">금액</th>
+                <th className="text-center py-4 px-6 text-sm font-medium text-slate-500">결제방법</th>
+                <th className="text-center py-4 px-6 text-sm font-medium text-slate-500">작업</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-slate-500">
+                  <td colSpan={6} className="text-center py-12 text-slate-500">
                     이번 달 지출 내역이 없습니다.
                   </td>
                 </tr>
@@ -242,36 +242,36 @@ export default function Expense() {
                 transactions.map((t) => {
                   const cat = EXPENSE_CATEGORIES.find(c => c.value === t.category);
                   return (
-                    <tr key={t.id} className="hover:bg-slate-50">
-                      <td className="px-4 py-3 text-sm text-slate-900">
+                    <tr key={t.id} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="py-4 px-6 text-sm text-slate-600">
                         {format(new Date(t.transaction_date), 'M/d (EEE)', { locale: ko })}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="py-4 px-6">
                         <div className="text-sm font-medium text-slate-900">{t.description || '-'}</div>
                         {t.notes && <div className="text-xs text-slate-500">{t.notes}</div>}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="py-4 px-6">
                         <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${cat?.color || 'bg-gray-100'}`}>
                           {cat?.icon} {cat?.label || t.category}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right font-medium text-slate-900">
+                      <td className="py-4 px-6 text-right font-medium text-slate-900">
                         {formatCurrency(t.amount)}
                       </td>
-                      <td className="px-4 py-3 text-center text-sm text-slate-500">
+                      <td className="py-4 px-6 text-center text-sm text-slate-500">
                         {t.payment_method || '-'}
                       </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
+                      <td className="py-4 px-6 text-center">
+                        <div className="flex items-center justify-center gap-2">
                           <button
                             onClick={() => openEditModal(t)}
-                            className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary-600"
                           >
                             <Edit2 className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(t.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+                            className="p-2 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -289,7 +289,7 @@ export default function Expense() {
       {/* 지출 등록/수정 모달 */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">
                 {editingId ? '지출 수정' : '지출 등록'}
@@ -381,13 +381,13 @@ export default function Expense() {
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
                 onClick={closeModal}
-                className="btn btn-secondary flex-1"
+                className="btn-secondary flex-1"
               >
                 취소
               </button>
               <button
                 onClick={handleSubmit}
-                className="btn btn-primary flex-1"
+                className="btn-primary flex-1"
                 disabled={!form.amount || !form.transaction_date || !form.description}
               >
                 {editingId ? '수정' : '등록'}

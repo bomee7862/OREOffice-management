@@ -149,7 +149,7 @@ export default function Transactions() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">입출금 관리</h1>
+          <h1 className="text-xl font-bold text-slate-900">입출금 관리</h1>
           <p className="text-slate-500 mt-1">수입과 지출을 관리합니다</p>
         </div>
         <button onClick={openModal} className="btn-primary flex items-center gap-2">
@@ -161,21 +161,21 @@ export default function Transactions() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-green-600" />
+          <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-teal-600" />
           </div>
           <div>
             <p className="text-sm text-slate-500">총 수입</p>
-            <p className="text-xl font-bold text-green-600">{formatCurrency(stats.totalIncome)}</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(stats.totalIncome)}</p>
           </div>
         </div>
         <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-            <TrendingDown className="w-6 h-6 text-red-600" />
+          <div className="w-12 h-12 bg-rose-100 rounded-xl flex items-center justify-center">
+            <TrendingDown className="w-6 h-6 text-rose-600" />
           </div>
           <div>
             <p className="text-sm text-slate-500">총 지출</p>
-            <p className="text-xl font-bold text-red-600">{formatCurrency(stats.totalExpense)}</p>
+            <p className="text-xl font-bold text-slate-900">{formatCurrency(stats.totalExpense)}</p>
           </div>
         </div>
         <div className="card flex items-center gap-4">
@@ -184,7 +184,7 @@ export default function Transactions() {
           </div>
           <div>
             <p className="text-sm text-slate-500">순이익</p>
-            <p className={`text-xl font-bold ${stats.totalIncome - stats.totalExpense >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+            <p className="text-xl font-bold text-slate-900">
               {formatCurrency(stats.totalIncome - stats.totalExpense)}
             </p>
           </div>
@@ -269,7 +269,7 @@ export default function Transactions() {
                   </td>
                   <td className="py-4 px-6">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      tx.type === '입금' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                      tx.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
                     }`}>
                       {tx.type === '입금' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       {tx.type}
@@ -278,15 +278,13 @@ export default function Transactions() {
                   <td className="py-4 px-6 text-slate-600">{tx.category}</td>
                   <td className="py-4 px-6 text-slate-900">{tx.company_name || '-'}</td>
                   <td className="py-4 px-6 text-slate-600">{tx.description || '-'}</td>
-                  <td className={`py-4 px-6 text-right font-medium ${
-                    tx.type === '입금' ? 'text-green-600' : 'text-red-600'
-                  }`}>
+                  <td className="py-4 px-6 text-right font-medium text-slate-900">
                     {tx.type === '입금' ? '+' : '-'}{formatCurrency(tx.amount)}
                   </td>
                   <td className="py-4 px-6 text-center">
                     <button
                       onClick={() => handleDelete(tx.id)}
-                      className="text-slate-400 hover:text-red-600 text-sm"
+                      className="text-slate-400 hover:text-rose-600 text-sm"
                     >
                       삭제
                     </button>
@@ -301,7 +299,7 @@ export default function Transactions() {
       {/* 거래 등록 모달 */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
               <h2 className="text-xl font-bold text-slate-900">거래 등록</h2>
               <button onClick={closeModal} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -325,8 +323,8 @@ export default function Transactions() {
                       className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                         formData.type === type
                           ? type === '입금' 
-                            ? 'bg-green-600 text-white' 
-                            : 'bg-red-600 text-white'
+                            ? 'bg-teal-600 text-white' 
+                            : 'bg-rose-600 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}
                     >

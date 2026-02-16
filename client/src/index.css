@@ -15,6 +15,12 @@ body {
   min-height: 100vh;
 }
 
+/* Lucide 아이콘 크기 85% 축소 */
+svg[stroke-linecap="round"][stroke-linejoin="round"] {
+  transform: scale(0.85);
+  transform-origin: center;
+}
+
 /* 스크롤바 스타일 */
 ::-webkit-scrollbar {
   width: 8px;
@@ -37,16 +43,24 @@ body {
 
 /* 커스텀 컴포넌트 */
 @layer components {
+  .btn {
+    @apply inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 cursor-pointer whitespace-nowrap;
+  }
+
   .btn-primary {
-    @apply bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md;
+    @apply btn bg-primary-600 hover:bg-primary-700 text-white px-4 py-2 shadow-sm hover:shadow-md;
   }
-  
+
   .btn-secondary {
-    @apply bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    @apply btn bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2;
   }
-  
+
   .btn-danger {
-    @apply bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    @apply btn bg-rose-500 hover:bg-rose-600 text-white px-4 py-2;
+  }
+
+  .btn-sm {
+    @apply text-sm px-3 py-1.5;
   }
   
   .card {

@@ -420,7 +420,7 @@ export default function TransactionSearch() {
               <button
                 onClick={() => setFilters(prev => ({ ...prev, type: '입금', categories: [] }))}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                  filters.type === '입금' ? 'bg-green-600 text-white' : 'bg-green-100 text-green-700 hover:bg-green-200'
+                  filters.type === '입금' ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
                 }`}
               >
                 <ArrowDownCircle className="w-4 h-4" />
@@ -429,7 +429,7 @@ export default function TransactionSearch() {
               <button
                 onClick={() => setFilters(prev => ({ ...prev, type: '지출', categories: [] }))}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                  filters.type === '지출' ? 'bg-red-600 text-white' : 'bg-red-100 text-red-700 hover:bg-red-200'
+                  filters.type === '지출' ? 'bg-rose-600 text-white' : 'bg-rose-100 text-rose-700 hover:bg-rose-200'
                 }`}
               >
                 <ArrowUpCircle className="w-4 h-4" />
@@ -466,9 +466,9 @@ export default function TransactionSearch() {
                   onClick={() => toggleStatus(status)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     filters.status.includes(status)
-                      ? status === '완료' ? 'bg-green-600 text-white'
+                      ? status === '완료' ? 'bg-teal-600 text-white'
                         : status === '대기' ? 'bg-amber-500 text-white'
-                        : 'bg-red-600 text-white'
+                        : 'bg-rose-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
                 >
@@ -487,8 +487,8 @@ export default function TransactionSearch() {
           className="w-full p-4 flex items-center justify-between hover:bg-slate-50 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <Calculator className="w-5 h-5 text-blue-600" />
+            <div className="p-2 bg-primary-100 rounded-lg">
+              <Calculator className="w-5 h-5 text-primary-600" />
             </div>
             <div className="text-left">
               <h3 className="font-semibold text-slate-900">
@@ -498,9 +498,9 @@ export default function TransactionSearch() {
             </div>
           </div>
           <div className="text-right">
-            <div className={`text-2xl font-bold ${
+            <div className={`text-xl font-bold ${
               (monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0
-                ? 'text-blue-600' : 'text-red-600'
+                ? 'text-primary-600' : 'text-slate-900'
             }`}>
               {formatCurrency(monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0))}
             </div>
@@ -511,51 +511,51 @@ export default function TransactionSearch() {
         {showForecast && (
           <div className="border-t border-slate-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-green-50 rounded-xl">
+              <div className="p-4 bg-teal-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
-                  <span className="font-medium text-green-800">예상 수입</span>
+                  <TrendingUp className="w-5 h-5 text-teal-600" />
+                  <span className="font-medium text-slate-700">예상 수입</span>
                 </div>
-                <div className="text-2xl font-bold text-green-700 mb-2">
+                <div className="text-xl font-bold text-slate-900 mb-2">
                   {formatCurrency(monthlyBillings.reduce((sum, b) => sum + b.amount, 0))}
                 </div>
                 <div className="space-y-1 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-green-600">입금 완료</span>
-                    <span className="font-medium text-green-700">
+                    <span className="text-slate-500">입금 완료</span>
+                    <span className="font-medium text-slate-700">
                       {formatCurrency(monthlyBillings.filter(b => b.status === '완료').reduce((sum, b) => sum + b.amount, 0))}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-amber-600">입금 대기</span>
-                    <span className="font-medium text-amber-700">
+                    <span className="text-slate-500">입금 대기</span>
+                    <span className="font-medium text-slate-700">
                       {formatCurrency(monthlyBillings.filter(b => b.status === '대기').reduce((sum, b) => sum + b.amount, 0))}
                     </span>
                   </div>
                 </div>
               </div>
 
-              <div className="p-4 bg-red-50 rounded-xl">
+              <div className="p-4 bg-rose-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <ArrowUpCircle className="w-5 h-5 text-red-600" />
-                  <span className="font-medium text-red-800">예상 지출</span>
+                  <ArrowUpCircle className="w-5 h-5 text-rose-600" />
+                  <span className="font-medium text-slate-700">예상 지출</span>
                 </div>
-                <div className="text-2xl font-bold text-red-700 mb-2">
+                <div className="text-xl font-bold text-slate-900 mb-2">
                   {formatCurrency(monthlyExpenses.reduce((sum, e) => sum + e.amount, 0))}
                 </div>
               </div>
 
               <div className={`p-4 rounded-xl ${
                 (monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0
-                  ? 'bg-blue-50' : 'bg-red-50'
+                  ? 'bg-primary-50' : 'bg-rose-50'
               }`}>
                 <div className="flex items-center gap-2 mb-3">
-                  <Calculator className="w-5 h-5 text-blue-600" />
+                  <Calculator className="w-5 h-5 text-primary-600" />
                   <span className="font-medium text-slate-800">예상 순이익</span>
                 </div>
-                <div className={`text-2xl font-bold mb-2 ${
+                <div className={`text-xl font-bold mb-2 ${
                   (monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0)) >= 0
-                    ? 'text-blue-700' : 'text-red-700'
+                    ? 'text-primary-700' : 'text-slate-900'
                 }`}>
                   {formatCurrency(monthlyBillings.reduce((sum, b) => sum + b.amount, 0) - monthlyExpenses.reduce((sum, e) => sum + e.amount, 0))}
                 </div>
@@ -569,21 +569,21 @@ export default function TransactionSearch() {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="card p-4 bg-slate-50">
           <div className="text-sm text-slate-500">검색 결과</div>
-          <div className="text-2xl font-bold text-slate-900">{transactions.length}건</div>
+          <div className="text-xl font-bold text-slate-900">{transactions.length}건</div>
         </div>
-        <div className="card p-4 bg-green-50">
-          <div className="text-sm text-green-600">총 매출</div>
-          <div className="text-2xl font-bold text-green-700">{formatCurrency(incomeTotal)}</div>
-          <div className="text-xs text-green-500">보증금입금 제외</div>
+        <div className="card p-4 bg-teal-50">
+          <div className="text-sm text-slate-500">총 매출</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(incomeTotal)}</div>
+          <div className="text-xs text-slate-500">보증금입금 제외</div>
         </div>
         <div className="card p-4 bg-amber-50">
-          <div className="text-sm text-amber-600">보증금 입금</div>
-          <div className="text-2xl font-bold text-amber-700">{formatCurrency(depositIncomeTotal)}</div>
-          <div className="text-xs text-amber-500">예수금 (부채)</div>
+          <div className="text-sm text-slate-500">보증금 입금</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(depositIncomeTotal)}</div>
+          <div className="text-xs text-slate-500">예수금 (부채)</div>
         </div>
-        <div className="card p-4 bg-red-50">
-          <div className="text-sm text-red-600">총 지출</div>
-          <div className="text-2xl font-bold text-red-700">{formatCurrency(expenseTotal)}</div>
+        <div className="card p-4 bg-rose-50">
+          <div className="text-sm text-slate-500">총 지출</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(expenseTotal)}</div>
         </div>
       </div>
 
@@ -607,7 +607,7 @@ export default function TransactionSearch() {
               {loading ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
@@ -624,7 +624,7 @@ export default function TransactionSearch() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        t.type === '입금' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        t.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
                       }`}>
                         {t.type === '입금' ? <ArrowDownCircle className="w-3 h-3" /> : <ArrowUpCircle className="w-3 h-3" />}
                         {t.type}
@@ -638,9 +638,9 @@ export default function TransactionSearch() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        t.status === '완료' ? 'bg-green-100 text-green-700'
+                        t.status === '완료' ? 'bg-teal-100 text-teal-700'
                           : t.status === '대기' ? 'bg-amber-100 text-amber-700'
-                          : 'bg-red-100 text-red-700'
+                          : 'bg-rose-100 text-rose-700'
                       }`}>
                         {t.status}
                       </span>
@@ -661,26 +661,26 @@ export default function TransactionSearch() {
     <>
       {/* 요약 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="card p-5 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+        <div className="card p-5 bg-gradient-to-br from-primary-50 to-primary-100 border-primary-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-blue-200 rounded-lg">
-              <Wallet className="w-5 h-5 text-blue-700" />
+            <div className="p-2 bg-primary-200 rounded-lg">
+              <Wallet className="w-5 h-5 text-primary-700" />
             </div>
-            <span className="text-sm font-medium text-blue-700">총 보유 보증금</span>
+            <span className="text-sm font-medium text-primary-700">총 보유 보증금</span>
           </div>
-          <div className="text-2xl font-bold text-blue-800">{formatCurrency(depositStats.totalHolding)}</div>
-          <div className="text-xs text-blue-600 mt-1">{depositStats.holding.length}건</div>
+          <div className="text-xl font-bold text-primary-800">{formatCurrency(depositStats.totalHolding)}</div>
+          <div className="text-xs text-primary-600 mt-1">{depositStats.holding.length}건</div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+        <div className="card p-5 bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-green-200 rounded-lg">
-              <CheckCircle2 className="w-5 h-5 text-green-700" />
+            <div className="p-2 bg-teal-200 rounded-lg">
+              <CheckCircle2 className="w-5 h-5 text-teal-700" />
             </div>
-            <span className="text-sm font-medium text-green-700">입금 완료</span>
+            <span className="text-sm font-medium text-slate-700">입금 완료</span>
           </div>
-          <div className="text-2xl font-bold text-green-800">{formatCurrency(depositStats.totalHolding)}</div>
-          <div className="text-xs text-green-600 mt-1">{depositStats.holding.length}건</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(depositStats.totalHolding)}</div>
+          <div className="text-xs text-slate-500 mt-1">{depositStats.holding.length}건</div>
         </div>
 
         <div className="card p-5 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
@@ -688,21 +688,21 @@ export default function TransactionSearch() {
             <div className="p-2 bg-amber-200 rounded-lg">
               <Clock className="w-5 h-5 text-amber-700" />
             </div>
-            <span className="text-sm font-medium text-amber-700">입금 대기</span>
+            <span className="text-sm font-medium text-slate-700">입금 대기</span>
           </div>
-          <div className="text-2xl font-bold text-amber-800">{formatCurrency(depositStats.totalPending)}</div>
-          <div className="text-xs text-amber-600 mt-1">{depositStats.pending.length}건</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(depositStats.totalPending)}</div>
+          <div className="text-xs text-slate-500 mt-1">{depositStats.pending.length}건</div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-violet-50 to-violet-100 border-violet-200">
+        <div className="card p-5 bg-gradient-to-br from-coral-50 to-coral-100 border-coral-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-violet-200 rounded-lg">
-              <RefreshCw className="w-5 h-5 text-violet-700" />
+            <div className="p-2 bg-coral-200 rounded-lg">
+              <RefreshCw className="w-5 h-5 text-coral-700" />
             </div>
-            <span className="text-sm font-medium text-violet-700">전환 예정</span>
+            <span className="text-sm font-medium text-slate-700">전환 예정</span>
           </div>
-          <div className="text-2xl font-bold text-violet-800">{formatCurrency(depositStats.totalConversionPending)}</div>
-          <div className="text-xs text-violet-600 mt-1">{depositStats.conversionPending.length}건 (계약종료 도래)</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(depositStats.totalConversionPending)}</div>
+          <div className="text-xs text-slate-500 mt-1">{depositStats.conversionPending.length}건 (계약종료 도래)</div>
         </div>
       </div>
 
@@ -733,7 +733,7 @@ export default function TransactionSearch() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
                   </td>
                 </tr>
               ) : [...depositStats.holding, ...depositStats.pending].length === 0 ? (
@@ -775,12 +775,12 @@ export default function TransactionSearch() {
                             입금대기
                           </span>
                         ) : isConversionPending ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-coral-100 text-coral-700">
                             <RefreshCw className="w-3 h-3" />
                             전환예정
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
                             <CheckCircle2 className="w-3 h-3" />
                             보유중
                           </span>
@@ -807,10 +807,10 @@ export default function TransactionSearch() {
             <div className="p-2 bg-orange-200 rounded-lg">
               <AlertCircle className="w-5 h-5 text-orange-700" />
             </div>
-            <span className="text-sm font-medium text-orange-700">총 미수금</span>
+            <span className="text-sm font-medium text-slate-700">총 미수금</span>
           </div>
-          <div className="text-2xl font-bold text-orange-800">{formatCurrency(receivablesStats.totalUnpaid)}</div>
-          <div className="text-xs text-orange-600 mt-1">{receivablesStats.unpaid.length}건</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(receivablesStats.totalUnpaid)}</div>
+          <div className="text-xs text-slate-500 mt-1">{receivablesStats.unpaid.length}건</div>
         </div>
 
         <div className="card p-5 bg-gradient-to-br from-amber-50 to-amber-100 border-amber-200">
@@ -818,21 +818,21 @@ export default function TransactionSearch() {
             <div className="p-2 bg-amber-200 rounded-lg">
               <Clock className="w-5 h-5 text-amber-700" />
             </div>
-            <span className="text-sm font-medium text-amber-700">이번 달 미입금</span>
+            <span className="text-sm font-medium text-slate-700">이번 달 미입금</span>
           </div>
-          <div className="text-2xl font-bold text-amber-800">{formatCurrency(receivablesStats.totalCurrentMonth)}</div>
-          <div className="text-xs text-amber-600 mt-1">{receivablesStats.currentMonthUnpaid.length}건</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(receivablesStats.totalCurrentMonth)}</div>
+          <div className="text-xs text-slate-500 mt-1">{receivablesStats.currentMonthUnpaid.length}건</div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-red-50 to-red-100 border-red-200">
+        <div className="card p-5 bg-gradient-to-br from-rose-50 to-rose-100 border-rose-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-red-200 rounded-lg">
-              <AlertCircle className="w-5 h-5 text-red-700" />
+            <div className="p-2 bg-rose-200 rounded-lg">
+              <AlertCircle className="w-5 h-5 text-rose-700" />
             </div>
-            <span className="text-sm font-medium text-red-700">연체</span>
+            <span className="text-sm font-medium text-slate-700">연체</span>
           </div>
-          <div className="text-2xl font-bold text-red-800">{formatCurrency(receivablesStats.totalOverdue)}</div>
-          <div className="text-xs text-red-600 mt-1">{receivablesStats.overdue.length}건 (이전 달 미입금)</div>
+          <div className="text-xl font-bold text-slate-900">{formatCurrency(receivablesStats.totalOverdue)}</div>
+          <div className="text-xs text-slate-500 mt-1">{receivablesStats.overdue.length}건 (이전 달 미입금)</div>
         </div>
       </div>
 
@@ -863,7 +863,7 @@ export default function TransactionSearch() {
               {loading ? (
                 <tr>
                   <td colSpan={6} className="px-4 py-8 text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto"></div>
                   </td>
                 </tr>
               ) : receivablesStats.unpaid.length === 0 ? (
@@ -878,7 +878,7 @@ export default function TransactionSearch() {
                   .map((b) => {
                     const isOverdue = receivablesStats.overdue.some(o => o.id === b.id);
                     return (
-                      <tr key={b.id} className={`hover:bg-slate-50 ${isOverdue ? 'bg-red-50/50' : ''}`}>
+                      <tr key={b.id} className={`hover:bg-slate-50 ${isOverdue ? 'bg-rose-50/50' : ''}`}>
                         <td className="px-4 py-3 text-sm font-medium text-slate-900">
                           {b.year_month}
                         </td>
@@ -894,7 +894,7 @@ export default function TransactionSearch() {
                         </td>
                         <td className="px-4 py-3 text-center">
                           {isOverdue ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-rose-100 text-rose-700">
                               <AlertCircle className="w-3 h-3" />
                               연체
                             </span>
@@ -920,20 +920,20 @@ export default function TransactionSearch() {
     <div className="space-y-6">
       {/* 헤더 */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900">거래/현황 조회</h1>
+        <h1 className="text-xl font-bold text-slate-900">거래/현황 조회</h1>
         <div className="flex items-center gap-3">
           {activeTab === 'transactions' && (
             <>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="btn btn-secondary flex items-center gap-2"
+                className="btn-secondary flex items-center gap-2"
               >
                 <Filter className="w-4 h-4" />
                 필터 {showFilters ? '숨기기' : '보기'}
               </button>
               <button
                 onClick={exportToCSV}
-                className="btn btn-primary flex items-center gap-2"
+                className="btn-primary flex items-center gap-2"
                 disabled={transactions.length === 0}
               >
                 <Download className="w-4 h-4" />

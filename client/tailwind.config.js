@@ -8,21 +8,40 @@ export default {
     extend: {
       colors: {
         primary: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
+          50: '#eef2ff',
+          100: '#e0e7ff',
+          200: '#c7d2fe',
+          300: '#a5b4fc',
+          400: '#818cf8',
+          500: '#6366f1',
+          600: '#4f46e5',
+          700: '#4338ca',
+          800: '#3730a3',
+          900: '#312e81',
+        },
+        coral: {
+          50: '#fef5f4',
+          100: '#fee8e5',
+          200: '#fdd5cf',
+          300: '#fbb8ad',
+          400: '#f89283',
+          500: '#f07060',
+          600: '#dc5448',
+          700: '#b9443a',
         },
         occupied: '#22c55e',    // 입주 - 초록색
         vacant: '#94a3b8',      // 공실 - 회색
         reserved: '#f59e0b',    // 예약 - 주황색
         maintenance: '#ef4444', // 정비중 - 빨간색
+      },
+      fontSize: {
+        'xs':   ['0.575rem', { lineHeight: '0.765rem' }],
+        'sm':   ['0.68rem',  { lineHeight: '0.955rem' }],
+        'base': ['0.765rem', { lineHeight: '1.15rem' }],
+        'lg':   ['0.85rem',  { lineHeight: '1.34rem' }],
+        'xl':   ['0.955rem', { lineHeight: '1.34rem' }],
+        '2xl':  ['1.15rem',  { lineHeight: '1.53rem' }],
+        '3xl':  ['1.45rem',  { lineHeight: '1.72rem' }],
       },
       fontFamily: {
         sans: ['Pretendard', 'system-ui', 'sans-serif'],

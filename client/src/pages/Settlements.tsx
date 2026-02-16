@@ -90,7 +90,7 @@ export default function Settlements() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">월별 정산</h1>
+          <h1 className="text-xl font-bold text-slate-900">월별 정산</h1>
           <p className="text-slate-500 mt-1">월별 수입/지출 내역을 정산합니다</p>
         </div>
       </div>
@@ -139,23 +139,23 @@ export default function Settlements() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="card">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-green-600" />
+                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-teal-600" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">총 수입</p>
-                  <p className="text-xl font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                  <p className="text-xl font-bold text-slate-900">{formatCurrency(totalIncome)}</p>
                 </div>
               </div>
             </div>
             <div className="card">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center">
-                  <TrendingDown className="w-5 h-5 text-red-600" />
+                <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center">
+                  <TrendingDown className="w-5 h-5 text-rose-600" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">총 지출</p>
-                  <p className="text-xl font-bold text-red-600">{formatCurrency(totalExpense)}</p>
+                  <p className="text-xl font-bold text-slate-900">{formatCurrency(totalExpense)}</p>
                 </div>
               </div>
             </div>
@@ -166,7 +166,7 @@ export default function Settlements() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">순이익</p>
-                  <p className={`text-xl font-bold ${totalIncome - totalExpense >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <p className="text-xl font-bold text-slate-900">
                     {formatCurrency(totalIncome - totalExpense)}
                   </p>
                 </div>
@@ -189,8 +189,8 @@ export default function Settlements() {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* 수입 내역 */}
             <div className="card">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-green-600" />
+              <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-teal-600" />
                 수입 내역
               </h3>
               {incomeSummary.length === 0 ? (
@@ -198,14 +198,14 @@ export default function Settlements() {
               ) : (
                 <div className="space-y-3">
                   {incomeSummary.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-teal-50 rounded-lg">
                       <span className="font-medium text-slate-700">{item.category}</span>
-                      <span className="font-bold text-green-600">{formatCurrency(parseInt(item.total))}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(parseInt(item.total))}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between p-3 bg-green-100 rounded-lg border-2 border-green-200">
+                  <div className="flex items-center justify-between p-3 bg-teal-100 rounded-lg border-2 border-teal-200">
                     <span className="font-semibold text-slate-900">합계</span>
-                    <span className="font-bold text-green-700">{formatCurrency(totalIncome)}</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(totalIncome)}</span>
                   </div>
                 </div>
               )}
@@ -213,8 +213,8 @@ export default function Settlements() {
 
             {/* 지출 내역 */}
             <div className="card">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-600" />
+              <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                <TrendingDown className="w-5 h-5 text-rose-600" />
                 지출 내역
               </h3>
               {expenseSummary.length === 0 ? (
@@ -222,14 +222,14 @@ export default function Settlements() {
               ) : (
                 <div className="space-y-3">
                   {expenseSummary.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
                       <span className="font-medium text-slate-700">{item.category}</span>
-                      <span className="font-bold text-red-600">{formatCurrency(parseInt(item.total))}</span>
+                      <span className="font-bold text-slate-900">{formatCurrency(parseInt(item.total))}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between p-3 bg-red-100 rounded-lg border-2 border-red-200">
+                  <div className="flex items-center justify-between p-3 bg-rose-100 rounded-lg border-2 border-rose-200">
                     <span className="font-semibold text-slate-900">합계</span>
-                    <span className="font-bold text-red-700">{formatCurrency(totalExpense)}</span>
+                    <span className="font-bold text-slate-900">{formatCurrency(totalExpense)}</span>
                   </div>
                 </div>
               )}
@@ -238,7 +238,7 @@ export default function Settlements() {
 
           {/* 거래 상세 */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">
+            <h3 className="text-base font-semibold text-slate-900 mb-4">
               {selectedYear}년 {selectedMonth}월 전체 거래 내역
             </h3>
             
@@ -265,7 +265,7 @@ export default function Settlements() {
                         </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            tx.type === '입금' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            tx.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
                           }`}>
                             {tx.type}
                           </span>
@@ -273,9 +273,7 @@ export default function Settlements() {
                         <td className="py-3 px-4 text-sm text-slate-600">{tx.category}</td>
                         <td className="py-3 px-4 text-sm text-slate-900">{tx.company_name || '-'}</td>
                         <td className="py-3 px-4 text-sm text-slate-600">{tx.description || '-'}</td>
-                        <td className={`py-3 px-4 text-sm font-medium text-right ${
-                          tx.type === '입금' ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <td className="py-3 px-4 text-sm font-medium text-right text-slate-900">
                           {tx.type === '입금' ? '+' : '-'}{formatCurrency(tx.amount)}
                         </td>
                       </tr>
@@ -288,7 +286,7 @@ export default function Settlements() {
 
           {/* 과거 정산 목록 */}
           <div className="card">
-            <h3 className="text-lg font-semibold text-slate-900 mb-4">정산 히스토리</h3>
+            <h3 className="text-base font-semibold text-slate-900 mb-4">정산 히스토리</h3>
             
             {settlements.length === 0 ? (
               <p className="text-slate-500 text-center py-8">정산 내역이 없습니다.</p>
@@ -319,15 +317,13 @@ export default function Settlements() {
                         <td className="py-3 px-4 text-sm font-medium text-slate-900">
                           {settlement.year}년 {settlement.month}월
                         </td>
-                        <td className="py-3 px-4 text-sm text-right text-green-600">
+                        <td className="py-3 px-4 text-sm text-right text-slate-900">
                           {formatCurrency(settlement.total_income)}
                         </td>
-                        <td className="py-3 px-4 text-sm text-right text-red-600">
+                        <td className="py-3 px-4 text-sm text-right text-slate-900">
                           {formatCurrency(settlement.total_expense)}
                         </td>
-                        <td className={`py-3 px-4 text-sm font-medium text-right ${
-                          settlement.net_profit >= 0 ? 'text-green-600' : 'text-red-600'
-                        }`}>
+                        <td className="py-3 px-4 text-sm font-medium text-right text-slate-900">
                           {formatCurrency(settlement.net_profit)}
                         </td>
                         <td className="py-3 px-4 text-sm text-center text-slate-600">

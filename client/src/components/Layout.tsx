@@ -1,9 +1,8 @@
 import { ReactNode } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
   Building2,
-  Users,
   FileText,
   Building,
   ArrowDownCircle,
@@ -20,8 +19,7 @@ interface LayoutProps {
 const navItems = [
   { path: '/', icon: LayoutDashboard, label: '대시보드' },
   { path: '/floor-plan', icon: Building2, label: '호실 현황' },
-  { path: '/tenants', icon: Users, label: '입주사 관리' },
-  { path: '/contracts', icon: FileText, label: '계약 관리' },
+  { path: '/tenants', icon: FileText, label: '계약 관리' },
   { type: 'divider', label: '재무 관리' },
   { path: '/income', icon: ArrowDownCircle, label: '수입 관리' },
   { path: '/expense', icon: ArrowUpCircle, label: '지출 관리' },
@@ -32,6 +30,9 @@ const navItems = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
+  const location = useLocation();
+  const isFloorPlan = location.pathname === '/floor-plan';
+
   return (
     <div className="min-h-screen flex">
       {/* 사이드바 */}
@@ -88,7 +89,7 @@ export default function Layout({ children }: LayoutProps) {
       
       {/* 메인 콘텐츠 */}
       <main className="flex-1 ml-64">
-        <div className="p-8">
+        <div className={isFloorPlan ? 'p-8' : 'p-8 max-w-5xl mx-auto'}>
           {children}
         </div>
       </main>

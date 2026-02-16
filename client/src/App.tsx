@@ -3,7 +3,6 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import FloorPlan from './pages/FloorPlan'
 import Tenants from './pages/Tenants'
-import Contracts from './pages/Contracts'
 import Transactions from './pages/Transactions'
 import Income from './pages/Income'
 import Expense from './pages/Expense'
@@ -18,7 +17,6 @@ function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/floor-plan" element={<FloorPlan />} />
         <Route path="/tenants" element={<Tenants />} />
-        <Route path="/contracts" element={<Contracts />} />
         <Route path="/transactions" element={<Transactions />} />
         <Route path="/income" element={<Income />} />
         <Route path="/expense" element={<Expense />} />

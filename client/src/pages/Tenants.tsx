@@ -4,14 +4,7 @@ import { Tenant, Room, Contract, Document as DocType, TenantType, DocumentType }
 import { Plus, Pencil, Trash2, X, Search, Building2, Upload, FileText, Download, Eye, User, Mailbox, AlertTriangle, CheckCircle } from 'lucide-react';
 import { format, differenceInDays, differenceInMonths } from 'date-fns';
 
-const PostBoxIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 28" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M4 10L12 4L20 10H4Z" fill="#F87171"/>
-    <rect x="4" y="10" width="16" height="14" rx="2" fill="#FB7185"/>
-    <rect x="8" y="14" width="8" height="1.8" rx="0.9" fill="white" opacity="0.85"/>
-    <text x="12" y="22" textAnchor="middle" fill="white" fontSize="4.5" fontWeight="bold" fontFamily="Arial, sans-serif">POST</text>
-  </svg>
-);
+import PostBoxIcon from '../components/PostBoxIcon';
 
 export default function Tenants() {
   const [contracts, setContracts] = useState<Contract[]>([]);
@@ -108,7 +101,7 @@ export default function Tenants() {
     const daysRemaining = getDaysRemaining(contract.end_date);
     if (daysRemaining < 0) return { label: '만료', color: 'bg-rose-100 text-rose-700' };
     if (daysRemaining <= 30) return { label: '만료임박', color: 'bg-amber-100 text-amber-700' };
-    return { label: '진행중', color: 'bg-teal-100 text-teal-700' };
+    return { label: '진행중', color: 'bg-primary-100 text-primary-700' };
   };
 
   const formatCurrency = (amount: number) => {
@@ -329,16 +322,37 @@ export default function Tenants() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card">
-          <p className="text-sm text-slate-500">전체 계약</p>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.total}건</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+              <FileText className="w-5 h-5 text-primary-600" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">전체 계약</p>
+              <p className="text-xl font-bold text-slate-900">{stats.total}건</p>
+            </div>
+          </div>
         </div>
         <div className="card">
-          <p className="text-sm text-slate-500">활성 계약</p>
-          <p className="text-xl font-bold text-slate-900 mt-1">{stats.active}건</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
+              <CheckCircle className="w-5 h-5 text-primary-600" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">활성 계약</p>
+              <p className="text-xl font-bold text-slate-900">{stats.active}건</p>
+            </div>
+          </div>
         </div>
         <div className="card">
-          <p className="text-sm text-slate-500">만료 임박 (30일 이내)</p>
-          <p className="text-xl font-bold text-amber-600 mt-1">{stats.expiringSoon}건</p>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500">만료 임박 (30일 이내)</p>
+              <p className="text-xl font-bold text-amber-600">{stats.expiringSoon}건</p>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -388,7 +402,6 @@ export default function Tenants() {
           <thead className="bg-slate-50 border-b border-slate-200">
             <tr>
               <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">회사명</th>
-              <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">대표자</th>
               <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">호실</th>
               <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">계약기간</th>
               <th className="text-right py-4 px-6 text-sm font-medium text-slate-500">월 임대료</th>
@@ -399,7 +412,7 @@ export default function Tenants() {
           <tbody>
             {filteredContracts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="text-center py-12 text-slate-500">
+                <td colSpan={6} className="text-center py-12 text-slate-500">
                   계약 내역이 없습니다.
                 </td>
               </tr>
@@ -424,30 +437,27 @@ export default function Tenants() {
                         <span className="font-medium text-slate-900">{contract.company_name}</span>
                       </button>
                     </td>
-                    <td className="py-4 px-6 text-slate-600">{contract.representative_name}</td>
-                    <td className="py-4 px-6">
-                      <span className={`inline-flex px-2 py-1 rounded-full text-sm ${
-                        contract.tenant_type === '비상주'
-                          ? 'bg-coral-100 text-coral-700'
-                          : 'bg-teal-100 text-teal-700'
-                      }`}>
-                        {contract.room_number}호
-                      </span>
+                    <td className="py-4 px-6 text-slate-600">
+                      {contract.room_number}호
                     </td>
                     <td className="py-4 px-6">
-                      <p className="text-slate-600">
-                        {format(new Date(contract.start_date), 'yy.MM.dd')} ~ {format(new Date(contract.end_date), 'yy.MM.dd')}
+                      <p className="text-sm text-slate-600">
+                        {format(new Date(contract.start_date), 'yy.MM')} ~ {format(new Date(contract.end_date), 'yy.MM')}
                       </p>
-                      {contract.is_active && daysRemaining >= 0 && (
-                        <p className="text-sm text-slate-500">
-                          {formatRemainingTime(contract.end_date)} 남음
-                        </p>
+                      {contract.is_active && (
+                        <span className={`inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium ${
+                          daysRemaining < 0 ? 'bg-rose-100 text-rose-700'
+                            : daysRemaining <= 30 ? 'bg-amber-100 text-amber-700'
+                            : 'bg-primary-50 text-primary-700'
+                        }`}>
+                          {daysRemaining < 0 ? '만료' : `${formatRemainingTime(contract.end_date)} 남음`}
+                        </span>
                       )}
                     </td>
-                    <td className="py-4 px-6 text-right font-medium text-slate-900">
+                    <td className="py-4 px-6 text-right font-medium text-slate-900 whitespace-nowrap">
                       {formatCurrency(contract.monthly_rent)}
                     </td>
-                    <td className="py-4 px-6 text-center">
+                    <td className="py-4 px-6 text-center whitespace-nowrap">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${status.color}`}>
                         {status.label === '만료임박' && <AlertTriangle className="w-3 h-3" />}
                         {status.label === '진행중' && <CheckCircle className="w-3 h-3" />}
@@ -513,7 +523,7 @@ export default function Tenants() {
                     onClick={() => setFormData(prev => ({ ...prev, tenant_type: '상주', room_id: '' }))}
                     className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg border-2 font-medium transition-all ${
                       formData.tenant_type === '상주'
-                        ? 'border-teal-500 bg-teal-50 text-teal-700'
+                        ? 'border-primary-500 bg-primary-50 text-primary-700'
                         : 'border-slate-200 text-slate-600 hover:border-slate-300'
                     }`}
                   >

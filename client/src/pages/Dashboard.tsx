@@ -6,10 +6,11 @@ import {
   TrendingDown,
   AlertTriangle,
   ArrowRight,
-  Mailbox,
   AlertCircle,
   Wallet
 } from 'lucide-react';
+
+import PostBoxIcon from '../components/PostBoxIcon';
 import { dashboardApi, billingsApi } from '../api';
 import { DashboardSummary, Contract, Billing } from '../types';
 import { format } from 'date-fns';
@@ -118,7 +119,7 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="w-12 h-12 bg-coral-100 rounded-2xl flex items-center justify-center">
-              <Mailbox className="w-6 h-6 text-coral-600" />
+              <PostBoxIcon className="w-7 h-7" />
             </div>
           </div>
         </div>
@@ -135,8 +136,8 @@ export default function Dashboard() {
                 {format(new Date(), 'M월', { locale: ko })} 누적
               </p>
             </div>
-            <div className="w-12 h-12 bg-teal-100 rounded-2xl flex items-center justify-center">
-              <TrendingUp className="w-6 h-6 text-teal-600" />
+            <div className="w-12 h-12 rounded-2xl flex items-center justify-center">
+              <TrendingUp className="w-6 h-6 text-coral-500" />
             </div>
           </div>
         </div>

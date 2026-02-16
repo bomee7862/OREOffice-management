@@ -139,8 +139,8 @@ export default function Settlements() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="card">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-teal-600" />
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center">
+                  <TrendingUp className="w-5 h-5 text-coral-500" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">총 수입</p>
@@ -190,7 +190,7 @@ export default function Settlements() {
             {/* 수입 내역 */}
             <div className="card">
               <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-teal-600" />
+                <TrendingUp className="w-5 h-5 text-coral-500" />
                 수입 내역
               </h3>
               {incomeSummary.length === 0 ? (
@@ -198,12 +198,12 @@ export default function Settlements() {
               ) : (
                 <div className="space-y-3">
                   {incomeSummary.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-teal-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 bg-coral-50 rounded-lg">
                       <span className="font-medium text-slate-700">{item.category}</span>
                       <span className="font-bold text-slate-900">{formatCurrency(parseInt(item.total))}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between p-3 bg-teal-100 rounded-lg border-2 border-teal-200">
+                  <div className="flex items-center justify-between p-3 bg-coral-50 rounded-lg border-2 border-coral-200">
                     <span className="font-semibold text-slate-900">합계</span>
                     <span className="font-bold text-slate-900">{formatCurrency(totalIncome)}</span>
                   </div>
@@ -265,7 +265,7 @@ export default function Settlements() {
                         </td>
                         <td className="py-3 px-4">
                           <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            tx.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
+                            tx.type === '입금' ? 'bg-coral-50 text-coral-500' : 'bg-rose-100 text-rose-700'
                           }`}>
                             {tx.type}
                           </span>

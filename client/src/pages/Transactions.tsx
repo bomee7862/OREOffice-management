@@ -161,8 +161,8 @@ export default function Transactions() {
       {/* 통계 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="card flex items-center gap-4">
-          <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-            <TrendingUp className="w-6 h-6 text-teal-600" />
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center">
+            <TrendingUp className="w-6 h-6 text-coral-500" />
           </div>
           <div>
             <p className="text-sm text-slate-500">총 수입</p>
@@ -269,7 +269,7 @@ export default function Transactions() {
                   </td>
                   <td className="py-4 px-6">
                     <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                      tx.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
+                      tx.type === '입금' ? 'bg-coral-50 text-coral-500' : 'bg-rose-100 text-rose-700'
                     }`}>
                       {tx.type === '입금' ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                       {tx.type}
@@ -323,7 +323,7 @@ export default function Transactions() {
                       className={`flex-1 py-3 rounded-lg font-medium transition-colors ${
                         formData.type === type
                           ? type === '입금' 
-                            ? 'bg-teal-600 text-white' 
+                            ? 'bg-coral-400 text-white' 
                             : 'bg-rose-600 text-white'
                           : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                       }`}

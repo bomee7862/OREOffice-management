@@ -423,8 +423,7 @@ export default function Report() {
   return (
     <div className="space-y-6">
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">📊 기간별 손익</h1>
+      <div className="flex items-center justify-end">
         <button
           onClick={exportCSV}
           className="btn-secondary flex items-center gap-2"
@@ -464,7 +463,7 @@ export default function Report() {
             <button
               onClick={() => setShowIncomeFilter(!showIncomeFilter)}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors flex items-center gap-1 ${
-                showIncomeFilter ? 'bg-teal-100 text-teal-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                showIncomeFilter ? 'bg-coral-50 text-coral-500' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
               }`}
             >
               <TrendingUp className="w-3 h-3" />
@@ -509,7 +508,7 @@ export default function Report() {
                     }}
                     className={`px-2 py-0.5 rounded text-xs transition-colors ${
                       selectedIncomeCategories.includes(cat.value)
-                        ? 'bg-teal-500 text-white'
+                        ? 'bg-coral-400 text-white'
                         : 'bg-slate-200 text-slate-500'
                     }`}
                   >
@@ -570,160 +569,56 @@ export default function Report() {
         )}
       </div>
 
-      {/* 게이지 카드 대시보드 */}
-      <div className="card p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-          {/* 호실 입주율 게이지 */}
-          <div className="flex flex-col items-center">
-            <div className="relative w-28 h-28">
-              {/* 배경 원 */}
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke="#e2e8f0"
-                  strokeWidth="10"
-                />
-                {/* 진행 원 */}
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke={breakEvenPoint.isAboveBEP ? '#0ea5e9' : '#f59e0b'}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={`${(breakEvenPoint.currentRate / 100) * 301.6} 301.6`}
-                />
-                {/* BEP 마커 */}
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke="#f43f5e"
-                  strokeWidth="3"
-                  strokeDasharray={`2 ${301.6 - 2}`}
-                  strokeDashoffset={`${-((breakEvenPoint.bepRateNet / 100) * 301.6)}`}
-                />
-              </svg>
-              {/* 중앙 텍스트 */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">{breakEvenPoint.currentRate}%</span>
-              </div>
-            </div>
-            <div className="mt-2 text-center">
-              <p className="text-sm font-semibold text-slate-700">🏢 호실 입주율</p>
-              <p className="text-xs text-slate-500">{occupancyStats.occupiedRooms}/{occupancyStats.totalRooms} 호실</p>
-              <p className="text-xs text-slate-500">BEP {breakEvenPoint.bepRateNet}%</p>
-            </div>
+      {/* BEP 분석 */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* BEP 프로그레스 바 */}
+        <div className="card p-5">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-sm font-bold text-slate-900">BEP 달성도</h4>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+              breakEvenPoint.isAboveBEP ? 'bg-primary-100 text-primary-600' : 'bg-amber-100 text-amber-700'
+            }`}>
+              {breakEvenPoint.isAboveBEP ? '달성' : '미달성'} ({breakEvenPoint.margin >= 0 ? '+' : ''}{breakEvenPoint.margin}%p)
+            </span>
           </div>
-
-          {/* 비상주 입주율 게이지 */}
-          <div className="flex flex-col items-center">
-            <div className="relative w-28 h-28">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke="#e2e8f0"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke="#8b5cf6"
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={`${((occupancyStats.occupiedPostbox / occupancyStats.totalPostbox) * 100 / 100) * 301.6} 301.6`}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">
-                  {((occupancyStats.occupiedPostbox / occupancyStats.totalPostbox) * 100).toFixed(0)}%
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 text-center">
-              <p className="text-sm font-semibold text-slate-700">📬 비상주 입주율</p>
-              <p className="text-xs text-slate-500">{occupancyStats.occupiedPostbox}/{occupancyStats.totalPostbox} POST BOX</p>
-              <p className="text-xs text-slate-500">월 기여: {formatCurrency(breakEvenPoint.monthlyPostboxIncome)}</p>
-              {breakEvenPoint.bepRoomsSaved > 0 && (
-                <p className="text-xs text-slate-500 font-medium">→ 호실 {breakEvenPoint.bepRoomsSaved}개분 기여 ✨</p>
-              )}
-            </div>
+          <div className="relative h-3 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 rounded-full transition-all duration-500"
+              style={{
+                width: `${Math.min((breakEvenPoint.currentRate / (breakEvenPoint.bepRateNet || 1)) * 100, 100)}%`,
+                backgroundColor: breakEvenPoint.isAboveBEP ? '#4f46e5' : '#818cf8'
+              }}
+            />
           </div>
-
-          {/* BEP 달성도 게이지 */}
-          <div className="flex flex-col items-center">
-            <div className="relative w-28 h-28">
-              <svg className="w-full h-full transform -rotate-90">
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke="#e2e8f0"
-                  strokeWidth="10"
-                />
-                <circle
-                  cx="56"
-                  cy="56"
-                  r="48"
-                  fill="none"
-                  stroke={breakEvenPoint.isAboveBEP ? '#0d9488' : '#f59e0b'}
-                  strokeWidth="10"
-                  strokeLinecap="round"
-                  strokeDasharray={`${Math.min((breakEvenPoint.currentRate / breakEvenPoint.bepRateNet) * 100, 100) / 100 * 301.6} 301.6`}
-                />
-              </svg>
-              <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-xl font-bold text-slate-900">
-                  {breakEvenPoint.isAboveBEP ? '✅' : '⚠️'}
-                </span>
-                <span className="text-lg font-bold text-slate-900">
-                  {breakEvenPoint.margin >= 0 ? '+' : ''}{breakEvenPoint.margin}%p
-                </span>
-              </div>
-            </div>
-            <div className="mt-2 text-center">
-              <p className="text-sm font-semibold text-slate-700">📊 BEP {breakEvenPoint.isAboveBEP ? '달성' : '미달성'}</p>
-              <p className="text-xs text-slate-500">필요 {breakEvenPoint.bepRoomsNet}개 호실</p>
-            </div>
+          <div className="flex items-center justify-between mt-1.5 text-xs text-slate-500">
+            <span>현재 {breakEvenPoint.currentRate}%</span>
+            <span>BEP {breakEvenPoint.bepRateNet}% ({breakEvenPoint.bepRoomsNet}개 호실)</span>
           </div>
+        </div>
 
-          {/* BEP 분석 상세 */}
-          <div className={`p-4 rounded-2xl ${breakEvenPoint.isAboveBEP ? 'bg-teal-50 border border-teal-200' : 'bg-amber-50 border border-amber-200'}`}>
-            <h4 className="text-sm font-bold mb-3 text-slate-900">
-              💡 BEP 분석
-            </h4>
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between text-slate-600">
-                <span>월 고정비</span>
-                <span className="font-medium">{formatCurrency(breakEvenPoint.monthlyFixedCost)}</span>
-              </div>
-              <div className="flex justify-between text-slate-600">
-                <span>비상주 기여</span>
-                <span className="font-medium">-{formatCurrency(breakEvenPoint.monthlyPostboxIncome)}</span>
-              </div>
-              <div className="flex justify-between text-slate-700 font-semibold border-t border-slate-200 pt-1">
-                <span>실질 고정비</span>
-                <span>{formatCurrency(breakEvenPoint.netFixedCost)}</span>
-              </div>
-              <div className="flex justify-between text-slate-500 mt-2">
-                <span>호실당 평균</span>
-                <span>{formatCurrency(avgRoomRent)}</span>
-              </div>
-              <div className="flex justify-between text-slate-700 font-medium">
-                <span>BEP 호실</span>
-                <span>{breakEvenPoint.bepRoomsNet}개 이상</span>
-              </div>
+        {/* BEP 분석 상세 */}
+        <div className="card p-5">
+          <h4 className="text-sm font-bold mb-3 text-slate-900">BEP 분석</h4>
+          <div className="space-y-1.5 text-xs">
+            <div className="flex justify-between text-slate-600">
+              <span>월 고정비</span>
+              <span className="font-medium">{formatCurrency(breakEvenPoint.monthlyFixedCost)}</span>
+            </div>
+            <div className="flex justify-between text-slate-600">
+              <span>비상주 기여</span>
+              <span className="font-medium">-{formatCurrency(breakEvenPoint.monthlyPostboxIncome)}</span>
+            </div>
+            <div className="flex justify-between text-slate-700 font-semibold border-t border-slate-200 pt-1">
+              <span>실질 고정비</span>
+              <span>{formatCurrency(breakEvenPoint.netFixedCost)}</span>
+            </div>
+            <div className="flex justify-between text-slate-500 mt-2">
+              <span>호실당 평균</span>
+              <span>{formatCurrency(avgRoomRent)}</span>
+            </div>
+            <div className="flex justify-between text-slate-700 font-medium">
+              <span>BEP 호실</span>
+              <span>{breakEvenPoint.bepRoomsNet}개 이상</span>
             </div>
           </div>
         </div>
@@ -737,58 +632,51 @@ export default function Report() {
         <>
           {/* 요약 카드 */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="card p-6 bg-teal-50 border-teal-200">
+            <div className="card p-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-teal-100 rounded-xl">
-                  <TrendingUp className="w-6 h-6 text-teal-600" />
+                <div className="p-3 bg-coral-50 rounded-xl">
+                  <TrendingUp className="w-6 h-6 text-coral-500" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-700 font-medium">총 수입</p>
-                  <p className="text-xl font-bold text-slate-900">{formatCurrency(totalIncome)}</p>
+                  <p className="text-lg font-bold text-slate-900 whitespace-nowrap">{formatCurrency(totalIncome)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="card p-6 bg-rose-50 border-rose-200">
+            <div className="card p-6">
               <div className="flex items-center gap-3">
                 <div className="p-3 bg-rose-100 rounded-xl">
                   <TrendingDown className="w-6 h-6 text-rose-600" />
                 </div>
                 <div>
                   <p className="text-sm text-slate-700 font-medium">총 지출</p>
-                  <p className="text-xl font-bold text-slate-900">{formatCurrency(totalExpense)}</p>
+                  <p className="text-lg font-bold text-slate-900 whitespace-nowrap">{formatCurrency(totalExpense)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="card p-6" style={{ 
-              backgroundColor: netProfit >= 0 ? '#eff6ff' : '#fef2f2',
-              borderColor: netProfit >= 0 ? '#93c5fd' : '#fecaca'
-            }}>
+            <div className="card p-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 rounded-xl" style={{ 
-                  backgroundColor: netProfit >= 0 ? '#dbeafe' : '#fee2e2' 
-                }}>
-                  <BarChart3 className="w-6 h-6" style={{ 
-                    color: netProfit >= 0 ? '#3b82f6' : '#dc2626' 
-                  }} />
+                <div className={`p-3 rounded-xl ${netProfit >= 0 ? 'bg-blue-100' : 'bg-rose-100'}`}>
+                  <BarChart3 className={`w-6 h-6 ${netProfit >= 0 ? 'text-blue-600' : 'text-rose-600'}`} />
                 </div>
                 <div>
                   <p className="text-sm font-medium text-slate-700">순이익</p>
-                  <p className="text-xl font-bold text-slate-900">{formatCurrency(netProfit)}</p>
+                  <p className="text-lg font-bold text-slate-900 whitespace-nowrap">{formatCurrency(netProfit)}</p>
                 </div>
               </div>
             </div>
 
-            <div className="card p-6 bg-primary-950/10 border-primary-800/30">
+            <div className="card p-6">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-primary-900/20 rounded-xl">
-                  <Wallet className="w-6 h-6 text-primary-800" />
+                <div className="p-3 bg-primary-100 rounded-xl">
+                  <Wallet className="w-6 h-6 text-primary-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-primary-800 font-medium">예수금 잔액</p>
-                  <p className="text-xl font-bold text-primary-900">{formatCurrency(totalDepositHeld)}</p>
-                  <p className="text-xs text-primary-700">현재 보유 기준</p>
+                  <p className="text-sm text-slate-700 font-medium">예수금 잔액</p>
+                  <p className="text-lg font-bold text-slate-900 whitespace-nowrap">{formatCurrency(totalDepositHeld)}</p>
+                  <p className="text-xs text-slate-500">현재 보유 기준</p>
                 </div>
               </div>
             </div>
@@ -802,7 +690,7 @@ export default function Report() {
               💰 예수금 변동 (조회 기간)
             </h3>
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 bg-indigo-50 rounded-xl">
+              <div className="p-3 border border-slate-200 rounded-xl">
                 <div className="flex items-center gap-1 mb-1">
                   <ArrowUpRight className="w-3 h-3 text-indigo-600" />
                   <span className="text-xs text-slate-700 font-medium">신규 입금</span>
@@ -811,7 +699,7 @@ export default function Report() {
                 <p className="text-xs text-slate-500">{depositChanges.newDepositsCount}건</p>
               </div>
               
-              <div className="p-3 bg-rose-50 rounded-xl">
+              <div className="p-3 border border-slate-200 rounded-xl">
                 <div className="flex items-center gap-1 mb-1">
                   <ArrowDownRight className="w-3 h-3 text-rose-600" />
                   <span className="text-xs text-slate-700 font-medium">위약금 전환</span>
@@ -918,9 +806,9 @@ export default function Report() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* 수입 상세 */}
             <div className="card">
-              <div className="p-4 border-b border-slate-200 bg-teal-50">
+              <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-coral-300">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-teal-600" />
+                  <TrendingUp className="w-5 h-5 text-coral-500" />
                   수입 상세
                 </h3>
               </div>
@@ -946,7 +834,7 @@ export default function Report() {
                           </tr>
                         );
                       })}
-                    <tr className="bg-teal-50 font-bold">
+                    <tr className="bg-slate-50 font-bold">
                       <td className="px-4 py-3">합계</td>
                       <td className="px-4 py-3 text-right text-slate-900">{formatCurrency(totalIncome)}</td>
                     </tr>
@@ -957,7 +845,7 @@ export default function Report() {
 
             {/* 지출 상세 */}
             <div className="card">
-              <div className="p-4 border-b border-slate-200 bg-rose-50">
+              <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-rose-400">
                 <h3 className="font-semibold text-slate-900 flex items-center gap-2">
                   <TrendingDown className="w-5 h-5 text-rose-600" />
                   지출 상세
@@ -985,7 +873,7 @@ export default function Report() {
                           </tr>
                         );
                       })}
-                    <tr className="bg-rose-50 font-bold">
+                    <tr className="bg-slate-50 font-bold">
                       <td className="px-4 py-3">합계</td>
                       <td className="px-4 py-3 text-right text-slate-900">{formatCurrency(totalExpense)}</td>
                     </tr>

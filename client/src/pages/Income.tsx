@@ -677,23 +677,23 @@ export default function Income() {
 
       {/* 요약 카드 */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card p-5 bg-amber-50 border-amber-200">
+        <div className="card p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-amber-100 rounded-xl">
               <AlertCircle className="w-6 h-6 text-amber-600" />
             </div>
             <div>
-              <p className="text-sm text-slate-700 font-medium">입금 대기</p>
-              <p className="text-xl font-bold text-slate-900">{pendingBillings.length}건</p>
-              <p className="text-sm text-slate-600">{formatCurrency(pendingTotal)}</p>
+              <p className="text-sm text-slate-700 font-medium">미입금</p>
+              <p className="text-xl font-bold text-slate-900">{unpaidRooms.length}건</p>
+              <p className="text-sm text-slate-600">{formatCurrency(unpaidTotal)}</p>
             </div>
           </div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-teal-50 to-teal-100 border-teal-300 shadow-md">
+        <div className="card p-5">
           <div className="flex items-center gap-3">
-            <div className="p-3 bg-teal-500 rounded-xl">
-              <CheckCircle2 className="w-6 h-6 text-white" />
+            <div className="p-3 rounded-xl">
+              <CheckCircle2 className="w-6 h-6 text-coral-500" />
             </div>
             <div>
               <p className="text-sm text-slate-700 font-semibold">💰 이달 실수입</p>
@@ -703,7 +703,7 @@ export default function Income() {
           </div>
         </div>
 
-        <div className="card p-5 bg-orange-50 border-orange-200">
+        <div className="card p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-orange-100 rounded-xl">
               <AlertTriangle className="w-6 h-6 text-orange-600" />
@@ -716,15 +716,15 @@ export default function Income() {
           </div>
         </div>
 
-        <div className="card p-5 bg-primary-50 border-primary-200">
+        <div className="card p-5">
           <div className="flex items-center gap-3">
             <div className="p-3 bg-primary-100 rounded-xl">
               <CreditCard className="w-6 h-6 text-primary-600" />
             </div>
             <div>
-              <p className="text-sm text-primary-600 font-medium">이달 총 예상</p>
-              <p className="text-xl font-bold text-primary-700">{formatCurrency(totalExpected)}</p>
-              <p className="text-sm text-primary-500">입주 {occupiedRooms.length}호실 기준</p>
+              <p className="text-sm text-slate-700 font-medium">이달 총 예상</p>
+              <p className="text-xl font-bold text-slate-900">{formatCurrency(totalExpected)}</p>
+              <p className="text-sm text-slate-600">입주 {occupiedRooms.length}호실 기준</p>
             </div>
           </div>
         </div>
@@ -732,11 +732,11 @@ export default function Income() {
 
       {/* 일괄 처리 버튼 */}
       {selectedPendingCount > 0 && (
-        <div className="card p-4 bg-primary-50 border-primary-200">
+        <div className="card p-4 border-l-[3px] border-l-primary-500">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <CheckSquare className="w-5 h-5 text-primary-600" />
-              <span className="font-medium text-primary-800">
+              <span className="font-medium text-slate-800">
                 {selectedPendingCount}건 선택됨 ({formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))})
               </span>
             </div>
@@ -762,7 +762,7 @@ export default function Income() {
 
       {/* 📋 호실별 임대료 */}
       <div className="card">
-        <div className="p-4 border-b border-slate-200 bg-amber-50 flex items-center justify-between">
+        <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-amber-400 flex items-center justify-between">
           <h3 className="font-semibold text-slate-900 flex items-center gap-2">
             <Building2 className="w-5 h-5 text-amber-600" />
             📋 호실별 임대료 ({occupiedRooms.length}개 호실 입주중)
@@ -807,7 +807,7 @@ export default function Income() {
                 const getStatusInfo = () => {
                   if (isNotGenerated) return { label: '미입금', color: 'bg-slate-100 text-slate-600', icon: '⚪' };
                   if (isCompleted && billing?.tax_invoice_issued) return { label: '세금계산서', color: 'bg-purple-100 text-purple-700', icon: '📄' };
-                  if (isCompleted) return { label: '완료', color: 'bg-teal-100 text-teal-700', icon: '✅' };
+                  if (isCompleted) return { label: '완료', color: 'bg-coral-50 text-coral-500', icon: '✅' };
                   if (isOverdue) return { label: '연체', color: 'bg-rose-100 text-rose-700', icon: '🔴' };
                   if (isPending) return { label: '대기', color: 'bg-amber-100 text-amber-700', icon: '🟡' };
                   return { label: '-', color: 'bg-slate-100 text-slate-600', icon: '' };
@@ -832,7 +832,7 @@ export default function Income() {
 
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        isCompleted ? 'bg-teal-100' : isOverdue ? 'bg-rose-100' : isPending ? 'bg-amber-100' : 'bg-slate-100'
+                        isCompleted ? 'bg-coral-50' : isOverdue ? 'bg-rose-100' : isPending ? 'bg-amber-100' : 'bg-slate-100'
                       }`}>
                         <span className="text-sm font-bold text-slate-900">{room.room_number}</span>
                       </div>
@@ -956,7 +956,7 @@ export default function Income() {
       {/* 📬 비상주 사용료 (POST BOX) */}
       {postboxIncome.length > 0 && (
         <div className="card">
-          <div className="p-4 border-b border-slate-200 bg-coral-50">
+          <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-coral-400">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
               <Mailbox className="w-5 h-5 text-coral-600" />
               📬 비상주 사용료 ({postboxIncome.length}건)
@@ -1002,7 +1002,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1062,7 +1062,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1076,9 +1076,9 @@ export default function Income() {
       {/* 🔄 사용료전환 (만기종료) */}
       {depositConversionIncome.length > 0 && (
         <div className="card">
-          <div className="p-4 border-b border-slate-200 bg-teal-50">
+          <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-coral-300">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <RefreshCw className="w-5 h-5 text-teal-600" />
+              <RefreshCw className="w-5 h-5 text-coral-500" />
               🔄 사용료전환 ({depositConversionIncome.length}건)
               <span className="text-sm font-normal text-slate-500 ml-2">* 만기종료 시 보증금→사용료 전환</span>
             </h3>
@@ -1087,8 +1087,8 @@ export default function Income() {
             {depositConversionIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center">
-                    <RefreshCw className="w-6 h-6 text-teal-600" />
+                  <div className="w-12 h-12 bg-coral-50 rounded-xl flex items-center justify-center">
+                    <RefreshCw className="w-6 h-6 text-coral-500" />
                   </div>
                   <div>
                     <div className="font-medium text-slate-900">
@@ -1122,7 +1122,7 @@ export default function Income() {
                   >
                     ✏️
                   </button>
-                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1187,7 +1187,7 @@ export default function Income() {
                 </div>
                 <div className="flex items-center gap-3">
                   <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
-                  <span className="inline-flex items-center px-2 py-1 bg-teal-100 text-teal-700 rounded-full text-xs font-medium">
+                  <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
                   </span>
@@ -1201,9 +1201,9 @@ export default function Income() {
       {/* 🏦 예수금(보증금) 관리 */}
       {(deposits.length > 0 || pendingConversions.length > 0) && (
         <div className="card">
-          <div className="p-4 border-b border-slate-200 bg-gradient-to-r from-indigo-50 to-coral-50">
+          <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-primary-400">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
-              <Landmark className="w-5 h-5 text-indigo-600" />
+              <Landmark className="w-5 h-5 text-primary-600" />
               🏦 예수금(보증금) 관리
               <span className="text-sm font-normal text-slate-500 ml-2">* 손익 미반영 (부채)</span>
             </h3>
@@ -1218,7 +1218,7 @@ export default function Income() {
               </h4>
               <div className="space-y-2">
                 {deposits.map((deposit) => (
-                  <div key={deposit.id} className="flex items-center justify-between p-3 bg-amber-50 rounded-xl border border-amber-200">
+                  <div key={deposit.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
                         <Landmark className="w-5 h-5 text-amber-600" />
@@ -1261,10 +1261,10 @@ export default function Income() {
               </h4>
               <div className="space-y-2">
                 {pendingConversions.map((deposit) => (
-                  <div key={deposit.id} className="flex items-center justify-between p-3 bg-teal-50 rounded-xl border border-teal-200">
+                  <div key={deposit.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                        <ArrowRightLeft className="w-5 h-5 text-teal-600" />
+                      <div className="w-10 h-10 bg-coral-50 rounded-lg flex items-center justify-center">
+                        <ArrowRightLeft className="w-5 h-5 text-coral-500" />
                       </div>
                       <div>
                         <div className="font-medium text-slate-900">
@@ -1335,7 +1335,7 @@ export default function Income() {
                   </div>
 
                   {/* 실제 납부 */}
-                  <div className="p-4 bg-teal-50 rounded-xl space-y-3">
+                  <div className="p-4 bg-coral-50 rounded-xl space-y-3">
                     <div className="text-sm font-medium text-slate-700">💰 실제 납부</div>
                     
                     {/* 빠른 선택 버튼 */}
@@ -1348,8 +1348,8 @@ export default function Income() {
                         }}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'vat_included'
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
+                            ? 'bg-coral-400 text-white'
+                            : 'bg-white border border-coral-300 text-coral-500 hover:bg-coral-50'
                         }`}
                       >
                         VAT 포함
@@ -1363,8 +1363,8 @@ export default function Income() {
                         }}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'vat_excluded'
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
+                            ? 'bg-coral-400 text-white'
+                            : 'bg-white border border-coral-300 text-coral-500 hover:bg-coral-50'
                         }`}
                       >
                         VAT 제외
@@ -1374,8 +1374,8 @@ export default function Income() {
                         onClick={() => setPaymentMode('custom')}
                         className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all ${
                           paymentMode === 'custom'
-                            ? 'bg-teal-600 text-white'
-                            : 'bg-white border border-teal-300 text-teal-700 hover:bg-teal-100'
+                            ? 'bg-coral-400 text-white'
+                            : 'bg-white border border-coral-300 text-coral-500 hover:bg-coral-50'
                         }`}
                       >
                         직접 입력
@@ -2047,7 +2047,7 @@ export default function Income() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-teal-600" />
+                <ArrowRightLeft className="w-5 h-5 text-coral-500" />
                 보증금 → 사용료 전환
               </h3>
               <button onClick={() => setShowConversionModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -2055,7 +2055,7 @@ export default function Income() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-teal-50 rounded-xl">
+              <div className="p-4 bg-coral-50 rounded-xl">
                 <div className="text-sm text-slate-500">전환 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedDeposit.room_number}호 | {selectedDeposit.company_name}

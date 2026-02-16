@@ -420,7 +420,7 @@ export default function TransactionSearch() {
               <button
                 onClick={() => setFilters(prev => ({ ...prev, type: '입금', categories: [] }))}
                 className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-1 ${
-                  filters.type === '입금' ? 'bg-teal-600 text-white' : 'bg-teal-100 text-teal-700 hover:bg-teal-200'
+                  filters.type === '입금' ? 'bg-coral-400 text-white' : 'bg-coral-50 text-coral-500 hover:bg-coral-100'
                 }`}
               >
                 <ArrowDownCircle className="w-4 h-4" />
@@ -466,7 +466,7 @@ export default function TransactionSearch() {
                   onClick={() => toggleStatus(status)}
                   className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
                     filters.status.includes(status)
-                      ? status === '완료' ? 'bg-teal-600 text-white'
+                      ? status === '완료' ? 'bg-coral-400 text-white'
                         : status === '대기' ? 'bg-amber-500 text-white'
                         : 'bg-rose-600 text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
@@ -511,9 +511,9 @@ export default function TransactionSearch() {
         {showForecast && (
           <div className="border-t border-slate-200 p-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-4 bg-teal-50 rounded-xl">
+              <div className="p-4 bg-coral-50 rounded-xl">
                 <div className="flex items-center gap-2 mb-3">
-                  <TrendingUp className="w-5 h-5 text-teal-600" />
+                  <TrendingUp className="w-5 h-5 text-coral-500" />
                   <span className="font-medium text-slate-700">예상 수입</span>
                 </div>
                 <div className="text-xl font-bold text-slate-900 mb-2">
@@ -571,7 +571,7 @@ export default function TransactionSearch() {
           <div className="text-sm text-slate-500">검색 결과</div>
           <div className="text-xl font-bold text-slate-900">{transactions.length}건</div>
         </div>
-        <div className="card p-4 bg-teal-50">
+        <div className="card p-4 bg-coral-50">
           <div className="text-sm text-slate-500">총 매출</div>
           <div className="text-xl font-bold text-slate-900">{formatCurrency(incomeTotal)}</div>
           <div className="text-xs text-slate-500">보증금입금 제외</div>
@@ -624,7 +624,7 @@ export default function TransactionSearch() {
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${
-                        t.type === '입금' ? 'bg-teal-100 text-teal-700' : 'bg-rose-100 text-rose-700'
+                        t.type === '입금' ? 'bg-coral-50 text-coral-500' : 'bg-rose-100 text-rose-700'
                       }`}>
                         {t.type === '입금' ? <ArrowDownCircle className="w-3 h-3" /> : <ArrowUpCircle className="w-3 h-3" />}
                         {t.type}
@@ -638,7 +638,7 @@ export default function TransactionSearch() {
                     </td>
                     <td className="px-4 py-3 text-center">
                       <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                        t.status === '완료' ? 'bg-teal-100 text-teal-700'
+                        t.status === '완료' ? 'bg-coral-50 text-coral-500'
                           : t.status === '대기' ? 'bg-amber-100 text-amber-700'
                           : 'bg-rose-100 text-rose-700'
                       }`}>
@@ -672,10 +672,10 @@ export default function TransactionSearch() {
           <div className="text-xs text-primary-600 mt-1">{depositStats.holding.length}건</div>
         </div>
 
-        <div className="card p-5 bg-gradient-to-br from-teal-50 to-teal-100 border-teal-200">
+        <div className="card p-5 bg-gradient-to-br from-coral-50 to-coral-100 border-coral-200">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-teal-200 rounded-lg">
-              <CheckCircle2 className="w-5 h-5 text-teal-700" />
+            <div className="p-2 bg-coral-100 rounded-lg">
+              <CheckCircle2 className="w-5 h-5 text-coral-500" />
             </div>
             <span className="text-sm font-medium text-slate-700">입금 완료</span>
           </div>
@@ -780,7 +780,7 @@ export default function TransactionSearch() {
                             전환예정
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-teal-100 text-teal-700">
+                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-coral-50 text-coral-500">
                             <CheckCircle2 className="w-3 h-3" />
                             보유중
                           </span>

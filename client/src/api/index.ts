@@ -7,6 +7,30 @@ const api = axios.create({
   },
 });
 
+// JWT 인증 인터셉터
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('auth_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// 401 응답 시 로그인 페이지로 리다이렉트
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('auth_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // 호실 API
 export const roomsApi = {
   getAll: () => api.get('/rooms'),
@@ -127,6 +151,18 @@ export const uploadsApi = {
   getByContract: (contractId: number) => api.get(`/uploads/contract/${contractId}`),
   download: (id: number) => api.get(`/uploads/download/${id}`, { responseType: 'blob' }),
   delete: (id: number) => api.delete(`/uploads/${id}`),
+};
+
+// 인증 API
+export const authApi = {
+  login: (username: string, password: string) =>
+    api.post('/auth/login', { username, password }),
+  getMe: () => api.get('/auth/me'),
+  getUsers: () => api.get('/auth/users'),
+  createUser: (data: { username: string; password: string; display_name: string; role: string }) =>
+    api.post('/auth/users', data),
+  updateUser: (id: number, data: any) => api.put(`/auth/users/${id}`, data),
+  deleteUser: (id: number) => api.delete(`/auth/users/${id}`),
 };
 
 export default api;

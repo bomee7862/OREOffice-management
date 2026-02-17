@@ -96,7 +96,7 @@ router.get('/', async (req, res) => {
     `);
 
     // 보유 보증금 총액 (활성 계약 중 보증금 상태가 '보유'인 것만 합산)
-    // 위약금전환, 사용료차감 등으로 전환된 보증금은 제외
+    // 위약금전환, 사용료전환 등으로 전환된 보증금은 제외
     const totalDeposit = await query(`
       SELECT COALESCE(SUM(deposit), 0) as total, COUNT(*) as count
       FROM contracts

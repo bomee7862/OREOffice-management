@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
 import PostBoxIcon from '../components/PostBoxIcon';
+import { useAuth } from '../contexts/AuthContext';
 
 type ViewTab = 'rooms' | 'postbox';
 
@@ -28,6 +29,7 @@ interface ResizeState {
 }
 
 export default function FloorPlan() {
+  const { isAdmin } = useAuth();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -739,7 +741,7 @@ export default function FloorPlan() {
                   >
                     <span className="font-bold text-sm">{room.room_number}호</span>
                     <div className="flex items-center gap-0.5">
-                      {isOccupied && (
+                      {isAdmin && isOccupied && (
                         <>
                           <button
                             className="p-1 rounded hover:bg-black/10 transition-colors"
@@ -757,7 +759,7 @@ export default function FloorPlan() {
                           </button>
                         </>
                       )}
-                      {isContractEnded && (
+                      {isAdmin && isContractEnded && (
                         <button
                           className="p-1 rounded hover:bg-white/30 transition-colors"
                           onClick={async (e) => {
@@ -773,7 +775,7 @@ export default function FloorPlan() {
                           <CheckCircle2 className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      {isVacant && (
+                      {isAdmin && isVacant && (
                         <button
                           className="p-1 rounded hover:bg-white/30 transition-colors"
                           onClick={(e) => {
@@ -1113,16 +1115,16 @@ export default function FloorPlan() {
               )}
 
               <div className="flex gap-3 pt-4 border-t border-slate-200">
-                {selectedRoom.status === '공실' && (
+                {isAdmin && selectedRoom.status === '공실' && (
                   <button onClick={openContractModal} className={`flex-1 px-4 py-2 rounded-lg font-medium transition-all duration-200 shadow-sm hover:shadow-md text-white ${
-                    selectedRoom.room_type === 'POST BOX' 
-                      ? 'bg-coral-600 hover:bg-coral-700' 
+                    selectedRoom.room_type === 'POST BOX'
+                      ? 'bg-coral-600 hover:bg-coral-700'
                       : 'bg-primary-600 hover:bg-primary-700'
                   }`}>
                     {selectedRoom.room_type === 'POST BOX' ? '비상주 계약 등록' : '입주 계약 등록'}
                   </button>
                 )}
-                {selectedRoom.status === '입주' && (
+                {isAdmin && selectedRoom.status === '입주' && (
                   <>
                     <button onClick={openEditModal} className="flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white bg-primary-600 hover:bg-primary-700">
                       정보 수정
@@ -1141,7 +1143,7 @@ export default function FloorPlan() {
                     </button>
                   </>
                 )}
-                {selectedRoom.status === '계약종료' && (
+                {isAdmin && selectedRoom.status === '계약종료' && (
                   <>
                     <button onClick={openContractModal} className="flex-1 px-4 py-2 rounded-lg font-medium transition-all text-white bg-primary-600 hover:bg-primary-700">
                       새 입주 등록

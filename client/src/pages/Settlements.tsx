@@ -1,18 +1,40 @@
 import { useEffect, useState } from 'react';
 import { settlementsApi } from '../api';
-import { Settlement, Transaction } from '../types';
-import { Calendar, TrendingUp, TrendingDown, PieChart, Download, RefreshCw } from 'lucide-react';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { Settlement } from '../types';
+import { Calendar, TrendingUp, TrendingDown, PieChart, RefreshCw } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 interface MonthlyDetail {
+  year_month: string;
   settlement: Settlement | null;
-  transactions: Transaction[];
-  summary: { type: string; category: string; total: string }[];
-  occupancy_rate: string;
+  income: {
+    total: number;
+    details: { category: string; total: string; count: string }[];
+  };
+  expense: {
+    total: number;
+    details: { category: string; total: string; count: string }[];
+  };
+  netProfit: number;
+  outstanding: {
+    total: number;
+    count: number;
+    items: any[];
+  };
+  occupancy: {
+    occupied: number;
+    total: number;
+    rate: number;
+  };
+  changes: {
+    newTenants: any[];
+    expiring: any[];
+    rentFree: any[];
+  };
 }
 
 export default function Settlements() {
+  const { isAdmin } = useAuth();
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
@@ -42,7 +64,8 @@ export default function Settlements() {
   const loadMonthlyDetail = async () => {
     setDetailLoading(true);
     try {
-      const response = await settlementsApi.getByMonth(selectedYear, selectedMonth);
+      const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+      const response = await settlementsApi.getDetail(yearMonth);
       setMonthlyDetail(response.data);
     } catch (error) {
       console.error('월별 상세 로드 실패:', error);
@@ -53,7 +76,8 @@ export default function Settlements() {
 
   const generateSettlement = async () => {
     try {
-      await settlementsApi.create(selectedYear, selectedMonth);
+      const yearMonth = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}`;
+      await settlementsApi.create(yearMonth);
       await loadSettlements();
       await loadMonthlyDetail();
       alert('정산이 생성되었습니다.');
@@ -71,11 +95,11 @@ export default function Settlements() {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
 
   // 카테고리별 요약
-  const incomeSummary = monthlyDetail?.summary.filter(s => s.type === '입금') || [];
-  const expenseSummary = monthlyDetail?.summary.filter(s => s.type === '지출') || [];
+  const incomeSummary = monthlyDetail?.income?.details || [];
+  const expenseSummary = monthlyDetail?.expense?.details || [];
 
-  const totalIncome = incomeSummary.reduce((sum, s) => sum + parseInt(s.total), 0);
-  const totalExpense = expenseSummary.reduce((sum, s) => sum + parseInt(s.total), 0);
+  const totalIncome = monthlyDetail?.income?.total || 0;
+  const totalExpense = monthlyDetail?.expense?.total || 0;
 
   if (loading) {
     return (
@@ -119,13 +143,15 @@ export default function Settlements() {
               ))}
             </select>
           </div>
-          <button
-            onClick={generateSettlement}
-            className="btn-primary flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            정산 갱신
-          </button>
+          {isAdmin && (
+            <button
+              onClick={generateSettlement}
+              className="btn-primary flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              정산 갱신
+            </button>
+          )}
         </div>
       </div>
 
@@ -179,7 +205,7 @@ export default function Settlements() {
                 </div>
                 <div>
                   <p className="text-sm text-slate-500">입주율</p>
-                  <p className="text-xl font-bold text-slate-900">{monthlyDetail?.occupancy_rate || 0}%</p>
+                  <p className="text-xl font-bold text-slate-900">{monthlyDetail?.occupancy?.rate || 0}%</p>
                 </div>
               </div>
             </div>
@@ -236,52 +262,44 @@ export default function Settlements() {
             </div>
           </div>
 
-          {/* 거래 상세 */}
-          <div className="card">
-            <h3 className="text-base font-semibold text-slate-900 mb-4">
-              {selectedYear}년 {selectedMonth}월 전체 거래 내역
-            </h3>
-            
-            {monthlyDetail?.transactions.length === 0 ? (
-              <p className="text-slate-500 text-center py-8">거래 내역이 없습니다.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-slate-50 border-b border-slate-200">
-                    <tr>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">날짜</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">유형</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">카테고리</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">입주사</th>
-                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-500">설명</th>
-                      <th className="text-right py-3 px-4 text-sm font-medium text-slate-500">금액</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {monthlyDetail?.transactions.map((tx) => (
-                      <tr key={tx.id} className="border-b border-slate-100 hover:bg-slate-50">
-                        <td className="py-3 px-4 text-sm text-slate-600">
-                          {format(new Date(tx.transaction_date), 'M/d', { locale: ko })}
-                        </td>
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            tx.type === '입금' ? 'bg-coral-50 text-coral-500' : 'bg-rose-100 text-rose-700'
-                          }`}>
-                            {tx.type}
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-sm text-slate-600">{tx.category}</td>
-                        <td className="py-3 px-4 text-sm text-slate-900">{tx.company_name || '-'}</td>
-                        <td className="py-3 px-4 text-sm text-slate-600">{tx.description || '-'}</td>
-                        <td className="py-3 px-4 text-sm font-medium text-right text-slate-900">
-                          {tx.type === '입금' ? '+' : '-'}{formatCurrency(tx.amount)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {/* 미수금 및 입주 변동 */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* 미수금 */}
+            <div className="card">
+              <h3 className="text-base font-semibold text-slate-900 mb-4">
+                미수금 현황
+              </h3>
+              {(monthlyDetail?.outstanding?.count || 0) === 0 ? (
+                <p className="text-slate-500 text-center py-8">미수금이 없습니다.</p>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-sm text-slate-600">
+                    {monthlyDetail?.outstanding?.count}건 / {formatCurrency(monthlyDetail?.outstanding?.total || 0)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 입주 변동 */}
+            <div className="card">
+              <h3 className="text-base font-semibold text-slate-900 mb-4">
+                {selectedYear}년 {selectedMonth}월 입주 변동
+              </h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <span className="font-medium text-slate-700">신규 입주</span>
+                  <span className="font-bold text-slate-900">{monthlyDetail?.changes?.newTenants?.length || 0}건</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                  <span className="font-medium text-slate-700">퇴실 예정</span>
+                  <span className="font-bold text-slate-900">{monthlyDetail?.changes?.expiring?.length || 0}건</span>
+                </div>
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <span className="font-medium text-slate-700">렌트프리</span>
+                  <span className="font-bold text-slate-900">{monthlyDetail?.changes?.rentFree?.length || 0}건</span>
+                </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* 과거 정산 목록 */}
@@ -307,15 +325,16 @@ export default function Settlements() {
                       <tr 
                         key={settlement.id} 
                         className={`border-b border-slate-100 hover:bg-slate-50 cursor-pointer ${
-                          settlement.year === selectedYear && settlement.month === selectedMonth ? 'bg-primary-50' : ''
+                          settlement.year_month === `${selectedYear}-${String(selectedMonth).padStart(2, '0')}` ? 'bg-primary-50' : ''
                         }`}
                         onClick={() => {
-                          setSelectedYear(settlement.year);
-                          setSelectedMonth(settlement.month);
+                          const [y, m] = settlement.year_month.split('-');
+                          setSelectedYear(parseInt(y));
+                          setSelectedMonth(parseInt(m));
                         }}
                       >
                         <td className="py-3 px-4 text-sm font-medium text-slate-900">
-                          {settlement.year}년 {settlement.month}월
+                          {settlement.year_month.split('-')[0]}년 {parseInt(settlement.year_month.split('-')[1])}월
                         </td>
                         <td className="py-3 px-4 text-sm text-right text-slate-900">
                           {formatCurrency(settlement.total_income)}

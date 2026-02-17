@@ -495,6 +495,29 @@ const createTables = async () => {
       END $$;
     `);
 
+    // 사용자 역할 ENUM
+    await client.query(`
+      DO $$ BEGIN
+        CREATE TYPE user_role AS ENUM ('admin', 'viewer');
+      EXCEPTION
+        WHEN duplicate_object THEN null;
+      END $$;
+    `);
+
+    // 사용자 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username VARCHAR(50) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        display_name VARCHAR(100) NOT NULL,
+        role user_role NOT NULL DEFAULT 'viewer',
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     // 인덱스 생성
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_contracts_room_id ON contracts(room_id);
@@ -509,6 +532,7 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_billings_year_month ON monthly_billings(year_month);
       CREATE INDEX IF NOT EXISTS idx_billings_tenant ON monthly_billings(tenant_id);
       CREATE INDEX IF NOT EXISTS idx_billings_status ON monthly_billings(status);
+      CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
     `);
 
     await client.query('COMMIT');

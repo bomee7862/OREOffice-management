@@ -1,4 +1,5 @@
 import pool from './connection';
+import bcrypt from 'bcryptjs';
 
 const seedData = async () => {
   const client = await pool.connect();
@@ -13,6 +14,7 @@ const seedData = async () => {
     await client.query('DELETE FROM tenants');
     await client.query('DELETE FROM rooms');
     await client.query('DELETE FROM monthly_settlements');
+    await client.query('DELETE FROM users');
 
     // 호실 데이터 삽입 - 1호~35호 (6인실 1개, 2인실 3개, 나머지 1인실)
     const rooms = [
@@ -127,11 +129,20 @@ const seedData = async () => {
         ('프리랜서 C', '박지민', '345-67-89012', 'freelancer-c@example.com', '010-3456-7890', '상주')
     `);
 
+    // 기본 관리자 계정 생성
+    const adminPasswordHash = await bcrypt.hash('admin123', 10);
+    await client.query(`
+      INSERT INTO users (username, password_hash, display_name, role)
+      VALUES ('admin', $1, '관리자', 'admin')
+      ON CONFLICT (username) DO NOTHING
+    `, [adminPasswordHash]);
+
     await client.query('COMMIT');
     console.log('✅ 시드 데이터 삽입 완료!');
     console.log(`   - 호실 ${rooms.length}개 생성 (1호~35호 + 회의실 + 자유석)`);
     console.log(`   - POST BOX ${postBoxes.length}개 생성`);
     console.log('   - 테스트 입주사 3개 생성');
+    console.log('   - 기본 관리자 계정 생성 (admin / admin123)');
     
   } catch (error) {
     await client.query('ROLLBACK');

@@ -3,10 +3,11 @@ import { transactionsApi } from '../api';
 import { Transaction } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { 
+import {
   Plus, ChevronLeft, ChevronRight, Trash2, Edit2, X,
   Zap, Droplets, Users, Sparkles, Wrench, Package, Megaphone, MoreHorizontal
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 const EXPENSE_CATEGORIES = [
   { value: '임대료', label: '임대료', icon: '🏠', color: 'bg-slate-100 text-slate-600' },
@@ -20,6 +21,7 @@ const EXPENSE_CATEGORIES = [
 ];
 
 export default function Expense() {
+  const { isAdmin } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -164,13 +166,15 @@ export default function Expense() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">💸 지출 관리</h1>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="btn-primary flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          지출 등록
-        </button>
+        {isAdmin && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            지출 등록
+          </button>
+        )}
       </div>
 
       {/* 월 선택 */}
@@ -228,7 +232,7 @@ export default function Expense() {
                 <th className="text-left py-4 px-6 text-sm font-medium text-slate-500">카테고리</th>
                 <th className="text-right py-4 px-6 text-sm font-medium text-slate-500">금액</th>
                 <th className="text-center py-4 px-6 text-sm font-medium text-slate-500">결제방법</th>
-                <th className="text-center py-4 px-6 text-sm font-medium text-slate-500">작업</th>
+                {isAdmin && <th className="text-center py-4 px-6 text-sm font-medium text-slate-500">작업</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -261,22 +265,24 @@ export default function Expense() {
                       <td className="py-4 px-6 text-center text-sm text-slate-500">
                         {t.payment_method || '-'}
                       </td>
-                      <td className="py-4 px-6 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => openEditModal(t)}
-                            className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary-600"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(t.id)}
-                            className="p-2 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+                      {isAdmin && (
+                        <td className="py-4 px-6 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => openEditModal(t)}
+                              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-primary-600"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(t.id)}
+                              className="p-2 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   );
                 })

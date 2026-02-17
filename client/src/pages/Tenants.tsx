@@ -5,8 +5,10 @@ import { Plus, Pencil, Trash2, X, Search, Building2, Upload, FileText, Download,
 import { format, differenceInDays, differenceInMonths } from 'date-fns';
 
 import PostBoxIcon from '../components/PostBoxIcon';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Tenants() {
+  const { isAdmin } = useAuth();
   const [contracts, setContracts] = useState<Contract[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -313,10 +315,12 @@ export default function Tenants() {
           <h1 className="text-xl font-bold text-slate-900">계약 관리</h1>
           <p className="text-slate-500 mt-1">입주사 및 계약 내역을 통합 관리합니다</p>
         </div>
-        <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
-          <Plus className="w-5 h-5" />
-          입주사 등록
-        </button>
+        {isAdmin && (
+          <button onClick={openCreateModal} className="btn-primary flex items-center gap-2">
+            <Plus className="w-5 h-5" />
+            입주사 등록
+          </button>
+        )}
       </div>
 
       {/* 통계 카드 */}
@@ -473,23 +477,27 @@ export default function Tenants() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
-                        <button
-                          onClick={() => {
-                            const tenant = tenants.find(t => t.id === contract.tenant_id);
-                            if (tenant) openEditModal(tenant);
-                          }}
-                          className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-700"
-                          title="입주사 수정"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTenant(contract.tenant_id, contract.company_name || '')}
-                          className="p-2 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600"
-                          title="삭제"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isAdmin && (
+                          <>
+                            <button
+                              onClick={() => {
+                                const tenant = tenants.find(t => t.id === contract.tenant_id);
+                                if (tenant) openEditModal(tenant);
+                              }}
+                              className="p-2 hover:bg-slate-100 rounded-lg text-slate-500 hover:text-slate-700"
+                              title="입주사 수정"
+                            >
+                              <Pencil className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteTenant(contract.tenant_id, contract.company_name || '')}
+                              className="p-2 hover:bg-rose-50 rounded-lg text-slate-500 hover:text-rose-600"
+                              title="삭제"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -831,10 +839,12 @@ export default function Tenants() {
                           className="p-2 hover:bg-slate-200 rounded text-slate-500" title="다운로드">
                           <Download className="w-4 h-4" />
                         </a>
-                        <button onClick={() => handleDeleteDocument(doc.id)}
-                          className="p-2 hover:bg-rose-100 rounded text-rose-500" title="삭제">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {isAdmin && (
+                          <button onClick={() => handleDeleteDocument(doc.id)}
+                            className="p-2 hover:bg-rose-100 rounded text-rose-500" title="삭제">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -842,12 +852,14 @@ export default function Tenants() {
               </div>
 
               <div className="flex gap-3 pt-4 border-t border-slate-200">
-                <button onClick={() => {
-                  closeDetailModal();
-                  if (selectedTenant) openEditModal(selectedTenant);
-                }} className="btn-primary flex-1">
-                  입주사 수정
-                </button>
+                {isAdmin && (
+                  <button onClick={() => {
+                    closeDetailModal();
+                    if (selectedTenant) openEditModal(selectedTenant);
+                  }} className="btn-primary flex-1">
+                    입주사 수정
+                  </button>
+                )}
                 <button onClick={closeDetailModal} className="btn-secondary flex-1">
                   닫기
                 </button>

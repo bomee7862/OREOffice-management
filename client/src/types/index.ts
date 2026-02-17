@@ -9,7 +9,7 @@ export type PaymentMethod = '계좌이체' | '카드' | '현금' | '자동이체
 export type TenantType = '상주' | '비상주';
 export type DocumentType = '계약서' | '사업자등록증' | '신분증' | '기타';
 export type TerminationType = '만기종료' | '중도종료';
-export type DepositStatus = '보유' | '사용료차감' | '위약금전환';
+export type DepositStatus = '보유' | '사용료전환' | '위약금전환';
 
 export interface Room {
   id: number;
@@ -213,6 +213,18 @@ export interface SettlementDetail {
     expiring: Contract[];
     rentFree: Contract[];
   };
+}
+
+export type UserRole = 'admin' | 'viewer';
+
+export interface User {
+  id: number;
+  username: string;
+  display_name: string;
+  role: UserRole;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface DashboardSummary {

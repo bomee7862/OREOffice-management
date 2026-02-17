@@ -108,6 +108,25 @@ erDiagram
         varchar status "대기|완료|연체|취소"
         date payment_date
         int transaction_id FK
+        boolean tax_invoice_issued
+        date tax_invoice_date
+        varchar tax_invoice_number
+        text notes
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    monthly_settlements {
+        int id PK
+        varchar year_month UK
+        int total_income
+        int total_expense
+        int net_profit
+        numeric occupancy_rate
+        int outstanding_amount
+        varchar status "작성중|확정"
+        timestamp confirmed_at
+        jsonb report_data
         text notes
         timestamp created_at
         timestamp updated_at
@@ -255,11 +274,32 @@ erDiagram
 | status | varchar | YES | '대기' | 청구 상태 |
 | payment_date | date | YES | - | 납부일 |
 | transaction_id | int (FK → transactions) | YES | - | 연결된 거래 ID |
+| tax_invoice_issued | boolean | YES | false | 세금계산서 발행 여부 |
+| tax_invoice_date | date | YES | - | 세금계산서 발행일 |
+| tax_invoice_number | varchar | YES | - | 세금계산서 번호 |
 | notes | text | YES | - | 비고 |
 | created_at | timestamp | YES | CURRENT_TIMESTAMP | 생성일 |
 | updated_at | timestamp | YES | CURRENT_TIMESTAMP | 수정일 |
 
-### 6. documents (문서)
+### 6. monthly_settlements (월별 정산)
+
+| 컬럼 | 타입 | Nullable | 기본값 | 설명 |
+|------|------|----------|--------|------|
+| **id** | int (PK) | NO | auto_increment | 정산 고유 ID |
+| **year_month** | varchar(7) (UNIQUE) | NO | - | 정산 년월 (YYYY-MM) |
+| **total_income** | int | NO | 0 | 총 수입 |
+| **total_expense** | int | NO | 0 | 총 지출 |
+| **net_profit** | int | NO | 0 | 순이익 |
+| occupancy_rate | numeric | YES | - | 입주율 (%) |
+| outstanding_amount | int | YES | 0 | 미수금 |
+| status | varchar(20) | YES | '작성중' | 정산 상태 (작성중/확정) |
+| confirmed_at | timestamp | YES | - | 확정일시 |
+| report_data | jsonb | YES | - | 확정 시점 상세 데이터 |
+| notes | text | YES | - | 비고 |
+| created_at | timestamp | YES | CURRENT_TIMESTAMP | 생성일 |
+| updated_at | timestamp | YES | CURRENT_TIMESTAMP | 수정일 |
+
+### 7. documents (문서)
 
 | 컬럼 | 타입 | Nullable | 기본값 | 설명 |
 |------|------|----------|--------|------|
@@ -353,3 +393,4 @@ erDiagram
 | transactions ↔ monthly_billings | 청구와 거래 1:1 매핑 (입금 확인 시) |
 | tenants → documents | 입주사별 문서 첨부 |
 | contracts → documents | 계약별 문서 첨부 |
+| monthly_settlements | 독립 테이블 (year_month UNIQUE) |

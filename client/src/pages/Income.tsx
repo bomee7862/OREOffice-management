@@ -3,14 +3,16 @@ import { billingsApi, transactionsApi, tenantsApi, roomsApi, contractsApi } from
 import { Billing, Tenant, Room, Transaction } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { 
-  Check, ChevronLeft, ChevronRight, Plus, RefreshCw, 
-  Building2, CreditCard, AlertCircle, CheckCircle2, FileText, 
+import {
+  Check, ChevronLeft, ChevronRight, Plus, RefreshCw,
+  Building2, CreditCard, AlertCircle, CheckCircle2, FileText,
   CheckSquare, Square, X, AlertTriangle, Coffee, Mailbox, Wallet,
   Landmark, ArrowRightLeft
 } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function Income() {
+  const { isAdmin } = useAuth();
   const [billings, setBillings] = useState<Billing[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [tenants, setTenants] = useState<Tenant[]>([]);
@@ -649,15 +651,17 @@ export default function Income() {
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">💰 수입 관리</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleGenerateBillings}
-            className="btn-secondary flex items-center gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            입금관리
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleGenerateBillings}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <RefreshCw className="w-4 h-4" />
+              입금관리
+            </button>
+          </div>
+        )}
       </div>
 
       {/* 월 선택 */}
@@ -740,22 +744,24 @@ export default function Income() {
                 {selectedPendingCount}건 선택됨 ({formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))})
               </span>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => openTaxInvoiceModal()}
-                className="btn-secondary flex items-center gap-2"
-              >
-                <FileText className="w-4 h-4" />
-                일괄 세금계산서
-              </button>
-              <button
-                onClick={() => openConfirmModal()}
-                className="btn-primary flex items-center gap-2"
-              >
-                <Check className="w-4 h-4" />
-                일괄 입금 확인
-              </button>
-            </div>
+            {isAdmin && (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => openTaxInvoiceModal()}
+                  className="btn-secondary flex items-center gap-2"
+                >
+                  <FileText className="w-4 h-4" />
+                  일괄 세금계산서
+                </button>
+                <button
+                  onClick={() => openConfirmModal()}
+                  className="btn-primary flex items-center gap-2"
+                >
+                  <Check className="w-4 h-4" />
+                  일괄 입금 확인
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -863,7 +869,7 @@ export default function Income() {
                       </span>
                       
                       {/* 액션 버튼 */}
-                      {isNotGenerated && (
+                      {isAdmin && isNotGenerated && (
                         <button
                           onClick={() => handleCreateSingleBilling(room.id, room.room_number)}
                           className="btn-secondary flex items-center gap-1 text-sm"
@@ -872,8 +878,8 @@ export default function Income() {
                           입금관리
                         </button>
                       )}
-                      
-                      {(isPending || isOverdue) && billing && (
+
+                      {isAdmin && (isPending || isOverdue) && billing && (
                         <div className="flex gap-1">
                           {!billing.tax_invoice_issued && (
                             <button
@@ -893,8 +899,8 @@ export default function Income() {
                           </button>
                         </div>
                       )}
-                      
-                      {isCompleted && billing && (
+
+                      {isAdmin && isCompleted && billing && (
                         <div className="flex gap-1">
                           {!billing.tax_invoice_issued && (
                             <button
@@ -986,7 +992,7 @@ export default function Income() {
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
-                  ) : (
+                  ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
                       className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
@@ -994,14 +1000,16 @@ export default function Income() {
                     >
                       <FileText className="w-4 h-4" />
                     </button>
+                  ) : null}
+                  {isAdmin && (
+                    <button
+                      onClick={() => openTransactionEditModal(transaction)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
+                      title="수정"
+                    >
+                      ✏️
+                    </button>
                   )}
-                  <button
-                    onClick={() => openTransactionEditModal(transaction)}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
-                    title="수정"
-                  >
-                    ✏️
-                  </button>
                   <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
@@ -1046,7 +1054,7 @@ export default function Income() {
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
-                  ) : (
+                  ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
                       className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
@@ -1054,14 +1062,16 @@ export default function Income() {
                     >
                       <FileText className="w-4 h-4" />
                     </button>
+                  ) : null}
+                  {isAdmin && (
+                    <button
+                      onClick={() => openTransactionEditModal(transaction)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
+                      title="수정"
+                    >
+                      ✏️
+                    </button>
                   )}
-                  <button
-                    onClick={() => openTransactionEditModal(transaction)}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
-                    title="수정"
-                  >
-                    ✏️
-                  </button>
                   <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
@@ -1106,7 +1116,7 @@ export default function Income() {
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
-                  ) : (
+                  ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
                       className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
@@ -1114,14 +1124,16 @@ export default function Income() {
                     >
                       <FileText className="w-4 h-4" />
                     </button>
+                  ) : null}
+                  {isAdmin && (
+                    <button
+                      onClick={() => openTransactionEditModal(transaction)}
+                      className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
+                      title="수정"
+                    >
+                      ✏️
+                    </button>
                   )}
-                  <button
-                    onClick={() => openTransactionEditModal(transaction)}
-                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-500"
-                    title="수정"
-                  >
-                    ✏️
-                  </button>
                   <span className="inline-flex items-center px-2 py-1 bg-coral-50 text-coral-500 rounded-full text-xs font-medium">
                     <CheckCircle2 className="w-3 h-3 mr-1" />
                     완료
@@ -1238,12 +1250,14 @@ export default function Income() {
                       <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-medium">
                         🟡 대기
                       </span>
-                      <button
-                        onClick={() => openDepositConfirmModal(deposit)}
-                        className="btn-primary btn-sm"
-                      >
-                        입금 확인
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => openDepositConfirmModal(deposit)}
+                          className="btn-primary btn-sm"
+                        >
+                          입금 확인
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}

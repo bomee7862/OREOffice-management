@@ -61,6 +61,15 @@ app.use('/api/settlements', authenticate, viewerWriteBlock, settlementRoutes);
 app.use('/api/dashboard', authenticate, viewerWriteBlock, dashboardRoutes);
 app.use('/api/uploads', authenticate, viewerWriteBlock, uploadRoutes);
 
+// 프로덕션: 클라이언트 정적 파일 서빙
+const clientDistPath = path.join(__dirname, '../../client/dist');
+app.use(express.static(clientDistPath));
+
+// SPA fallback — API 이외의 모든 GET 요청을 index.html로
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
+
 app.listen(PORT, HOST, () => {
   console.log(`서버가 http://${HOST}:${PORT} 에서 실행중입니다.`);
 });

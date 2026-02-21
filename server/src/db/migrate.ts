@@ -140,23 +140,6 @@ const createTables = async () => {
       );
     `);
 
-    // 문서 테이블 (파일 업로드)
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS documents (
-        id SERIAL PRIMARY KEY,
-        tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
-        contract_id INTEGER REFERENCES contracts(id) ON DELETE CASCADE,
-        document_type document_type NOT NULL,
-        file_name VARCHAR(255) NOT NULL,
-        original_name VARCHAR(255) NOT NULL,
-        file_path VARCHAR(500) NOT NULL,
-        file_size INTEGER,
-        mime_type VARCHAR(100),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `);
-
     // 계약 테이블
     await client.query(`
       CREATE TABLE IF NOT EXISTS contracts (
@@ -180,6 +163,23 @@ const createTables = async () => {
         deposit_status VARCHAR(20) DEFAULT '보유',
         termination_reason TEXT,
         terminated_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 문서 테이블 (파일 업로드) - contracts 이후 생성
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id SERIAL PRIMARY KEY,
+        tenant_id INTEGER REFERENCES tenants(id) ON DELETE CASCADE,
+        contract_id INTEGER REFERENCES contracts(id) ON DELETE CASCADE,
+        document_type document_type NOT NULL,
+        file_name VARCHAR(255) NOT NULL,
+        original_name VARCHAR(255) NOT NULL,
+        file_path VARCHAR(500) NOT NULL,
+        file_size INTEGER,
+        mime_type VARCHAR(100),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );

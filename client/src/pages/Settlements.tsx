@@ -3,6 +3,8 @@ import { settlementsApi } from '../api';
 import { Settlement } from '../types';
 import { Calendar, TrendingUp, TrendingDown, PieChart, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/format';
+import { showSuccess, showError } from '../utils/toast';
 
 interface MonthlyDetail {
   year_month: string;
@@ -80,16 +82,13 @@ export default function Settlements() {
       await settlementsApi.create(yearMonth);
       await loadSettlements();
       await loadMonthlyDetail();
-      alert('정산이 생성되었습니다.');
+      showSuccess('정산이 생성되었습니다.');
     } catch (error) {
       console.error('정산 생성 실패:', error);
-      alert('정산 생성에 실패했습니다.');
+      showError('정산 생성에 실패했습니다.');
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
-  };
 
   const years = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - 2 + i);
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
@@ -163,33 +162,27 @@ export default function Settlements() {
         <>
           {/* 요약 카드 */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div className="card">
+            <div className="card border-l-[3px] border-l-teal-400">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center">
-                  <TrendingUp className="w-5 h-5 text-coral-500" />
-                </div>
+                <TrendingUp className="w-5 h-5 text-teal-600" />
                 <div>
                   <p className="text-sm text-slate-500">총 수입</p>
                   <p className="text-xl font-bold text-slate-900">{formatCurrency(totalIncome)}</p>
                 </div>
               </div>
             </div>
-            <div className="card">
+            <div className="card border-l-[3px] border-l-rose-400">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-rose-100 rounded-lg flex items-center justify-center">
-                  <TrendingDown className="w-5 h-5 text-rose-600" />
-                </div>
+                <TrendingDown className="w-5 h-5 text-rose-500" />
                 <div>
                   <p className="text-sm text-slate-500">총 지출</p>
                   <p className="text-xl font-bold text-slate-900">{formatCurrency(totalExpense)}</p>
                 </div>
               </div>
             </div>
-            <div className="card">
+            <div className="card border-l-[3px] border-l-slate-400">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <PieChart className="w-5 h-5 text-primary-600" />
-                </div>
+                <PieChart className="w-5 h-5 text-slate-500" />
                 <div>
                   <p className="text-sm text-slate-500">순이익</p>
                   <p className="text-xl font-bold text-slate-900">
@@ -198,11 +191,9 @@ export default function Settlements() {
                 </div>
               </div>
             </div>
-            <div className="card">
+            <div className="card border-l-[3px] border-l-amber-400">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center">
-                  <Calendar className="w-5 h-5 text-amber-600" />
-                </div>
+                <Calendar className="w-5 h-5 text-amber-500" />
                 <div>
                   <p className="text-sm text-slate-500">입주율</p>
                   <p className="text-xl font-bold text-slate-900">{monthlyDetail?.occupancy?.rate || 0}%</p>
@@ -216,20 +207,20 @@ export default function Settlements() {
             {/* 수입 내역 */}
             <div className="card">
               <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-coral-500" />
+                <TrendingUp className="w-5 h-5 text-teal-600" />
                 수입 내역
               </h3>
               {incomeSummary.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">수입 내역이 없습니다.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {incomeSummary.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-coral-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-teal-300">
                       <span className="font-medium text-slate-700">{item.category}</span>
                       <span className="font-bold text-slate-900">{formatCurrency(parseInt(item.total))}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between p-3 bg-coral-50 rounded-lg border-2 border-coral-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-teal-400 bg-slate-50">
                     <span className="font-semibold text-slate-900">합계</span>
                     <span className="font-bold text-slate-900">{formatCurrency(totalIncome)}</span>
                   </div>
@@ -240,20 +231,20 @@ export default function Settlements() {
             {/* 지출 내역 */}
             <div className="card">
               <h3 className="text-base font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-rose-600" />
+                <TrendingDown className="w-5 h-5 text-rose-500" />
                 지출 내역
               </h3>
               {expenseSummary.length === 0 ? (
                 <p className="text-slate-500 text-center py-8">지출 내역이 없습니다.</p>
               ) : (
-                <div className="space-y-3">
+                <div className="space-y-2">
                   {expenseSummary.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-3 bg-rose-50 rounded-lg">
+                    <div key={idx} className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-rose-300">
                       <span className="font-medium text-slate-700">{item.category}</span>
                       <span className="font-bold text-slate-900">{formatCurrency(parseInt(item.total))}</span>
                     </div>
                   ))}
-                  <div className="flex items-center justify-between p-3 bg-rose-100 rounded-lg border-2 border-rose-200">
+                  <div className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-rose-400 bg-slate-50">
                     <span className="font-semibold text-slate-900">합계</span>
                     <span className="font-bold text-slate-900">{formatCurrency(totalExpense)}</span>
                   </div>
@@ -285,16 +276,16 @@ export default function Settlements() {
               <h3 className="text-base font-semibold text-slate-900 mb-4">
                 {selectedYear}년 {selectedMonth}월 입주 변동
               </h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-blue-300">
                   <span className="font-medium text-slate-700">신규 입주</span>
                   <span className="font-bold text-slate-900">{monthlyDetail?.changes?.newTenants?.length || 0}건</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-amber-300">
                   <span className="font-medium text-slate-700">퇴실 예정</span>
                   <span className="font-bold text-slate-900">{monthlyDetail?.changes?.expiring?.length || 0}건</span>
                 </div>
-                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                <div className="flex items-center justify-between p-3 rounded-lg border-l-2 border-l-green-300">
                   <span className="font-medium text-slate-700">렌트프리</span>
                   <span className="font-bold text-slate-900">{monthlyDetail?.changes?.rentFree?.length || 0}건</span>
                 </div>

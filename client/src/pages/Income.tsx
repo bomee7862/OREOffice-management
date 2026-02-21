@@ -1,21 +1,23 @@
 import { useEffect, useState } from 'react';
-import { billingsApi, transactionsApi, tenantsApi, roomsApi, contractsApi } from '../api';
+import { billingsApi, transactionsApi, tenantsApi, roomsApi } from '../api';
 import { Billing, Tenant, Room, Transaction } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
   Check, ChevronLeft, ChevronRight, Plus, RefreshCw,
-  Building2, CreditCard, AlertCircle, CheckCircle2, FileText,
-  CheckSquare, Square, X, AlertTriangle, Coffee, Mailbox, Wallet,
+  Building2, CreditCard, AlertCircle, CheckCircle2, FileText, Calculator,
+  CheckSquare, Square, X, AlertTriangle, Coffee, Mailbox,
   Landmark, ArrowRightLeft
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/format';
+import { showSuccess, showError } from '../utils/toast';
 
 export default function Income() {
   const { isAdmin } = useAuth();
   const [billings, setBillings] = useState<Billing[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const [, setTenants] = useState<Tenant[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -23,8 +25,7 @@ export default function Income() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTaxInvoiceModal, setShowTaxInvoiceModal] = useState(false);
   const [selectedBilling, setSelectedBilling] = useState<Billing | null>(null);
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
-  const [bulkMode, setBulkMode] = useState(false);
+  const [calcSelections, setCalcSelections] = useState<Record<string, number>>({});
   const [addType, setAddType] = useState<'회의실' | '1day' | '기타'>('회의실');
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [showTransactionTaxModal, setShowTransactionTaxModal] = useState(false);
@@ -78,14 +79,12 @@ export default function Income() {
   // 보증금(예수금) 관련 상태
   const [deposits, setDeposits] = useState<Transaction[]>([]);
   const [pendingConversions, setPendingConversions] = useState<Transaction[]>([]);
-  const [confirmedDeposits, setConfirmedDeposits] = useState<Transaction[]>([]); // 해당월 입금 확인된 보증금
-  const [allActiveDeposits, setAllActiveDeposits] = useState<Transaction[]>([]); // 전체 보유 예수금
+  const [, setConfirmedDeposits] = useState<Transaction[]>([]);
+  const [, setAllActiveDeposits] = useState<Transaction[]>([]);
   const [showDepositConfirmModal, setShowDepositConfirmModal] = useState(false);
   const [showConversionModal, setShowConversionModal] = useState(false);
   const [selectedDeposit, setSelectedDeposit] = useState<Transaction | null>(null);
   
-  // 수입 현황 펼치기 상태
-  const [expandedSections, setExpandedSections] = useState<{[key: string]: boolean}>({});
   const [depositConfirmForm, setDepositConfirmForm] = useState({
     payment_date: format(new Date(), 'yyyy-MM-dd'),
     payment_method: '계좌이체',
@@ -96,8 +95,6 @@ export default function Income() {
   const [conversionForm, setConversionForm] = useState({
     conversion_date: ''
   });
-  const [syncing, setSyncing] = useState(false);
-
   const yearMonth = format(currentDate, 'yyyy-MM');
   const monthStart = format(startOfMonth(currentDate), 'yyyy-MM-dd');
   const monthEnd = format(endOfMonth(currentDate), 'yyyy-MM-dd');
@@ -141,7 +138,7 @@ export default function Income() {
       setPendingConversions(pendingConversionsRes.data);
       setConfirmedDeposits(confirmedDepositsRes.data);
       setAllActiveDeposits(allDepositsRes.data);
-      setSelectedIds([]);
+      setCalcSelections({});
     } catch (error) {
       console.error('데이터 로딩 오류:', error);
     } finally {
@@ -150,7 +147,6 @@ export default function Income() {
   };
 
   // 데이터 분류
-  const pendingBillings = billings.filter(b => b.status === '대기');
   const completedBillings = billings.filter(b => b.status === '완료');
   
   // 해당월에 입금 대상인 호실 (입금일까지 계약이 유효한 호실)
@@ -226,18 +222,20 @@ export default function Income() {
     t.status === '완료'
   );
 
-  // 미입금 호실: 전체 입주 호실 중 입금 확인되지 않은 호실
-  const unpaidRooms = occupiedRooms.filter(room => {
-    const billing = billings.find(b => b.room_id === room.id);
-    // 청구가 없거나, 청구 상태가 '완료'가 아닌 경우
-    return !billing || billing.status !== '완료';
-  });
-
   // 요약 계산
-  const pendingTotal = pendingBillings.reduce((sum, b) => sum + b.amount, 0);
+  // billing 데이터를 기준으로 합산 (해당 월 실제 청구 금액 = source of truth)
+  // billing이 없는 입주 호실만 현재 계약 금액으로 보충
+  const billingRoomIds = new Set(billings.map(b => b.room_id));
+  const allBillingsTotal = billings.reduce((sum, b) => sum + b.amount, 0);
+  const unbilledOccupiedTotal = occupiedRooms
+    .filter(r => !billingRoomIds.has(r.id))
+    .reduce((sum, r) => sum + (r.monthly_rent_vat || 0), 0);
   const completedBillingTotal = completedBillings.reduce((sum, b) => sum + b.amount, 0);
-  const occupiedRoomsTotal = occupiedRooms.reduce((sum, r) => sum + (r.monthly_rent_vat || 0), 0);
-  const unpaidTotal = unpaidRooms.reduce((sum, r) => sum + (r.monthly_rent_vat || 0), 0);
+  const occupiedRoomsTotal = allBillingsTotal + unbilledOccupiedTotal;
+  const unpaidTotal = occupiedRoomsTotal - completedBillingTotal;
+  const billedRoomCount = billingRoomIds.size;
+  const unbilledRoomCount = occupiedRooms.filter(r => !billingRoomIds.has(r.id)).length;
+  const totalRoomCount = billedRoomCount + unbilledRoomCount;
   const postboxTotal = postboxIncome.reduce((sum, t) => sum + t.amount, 0);
   const penaltyTotal = penaltyIncome.reduce((sum, t) => sum + t.amount, 0);
   const depositConversionTotal = depositConversionIncome.reduce((sum, t) => sum + t.amount, 0);
@@ -251,10 +249,10 @@ export default function Income() {
     
     try {
       const result = await billingsApi.generate(yearMonth);
-      alert(`${result.data.count}건의 입금관리가 생성되었습니다.`);
+      showSuccess(`${result.data.count}건의 입금관리가 생성되었습니다.`);
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.error || '입금관리 생성에 실패했습니다.');
+      showError(error.response?.data?.error || '입금관리 생성에 실패했습니다.');
     }
   };
 
@@ -264,7 +262,7 @@ export default function Income() {
       await billingsApi.createSingle(roomId, yearMonth);
       loadData();
     } catch (error: any) {
-      alert(error.response?.data?.error || `${roomNumber}호 입금관리 생성에 실패했습니다.`);
+      showError(error.response?.data?.error || `${roomNumber}호 입금관리 생성에 실패했습니다.`);
     }
   };
 
@@ -285,34 +283,10 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('입금 확인 오류:', error);
-      alert('입금 확인에 실패했습니다.');
+      showError('입금 확인에 실패했습니다.');
     }
   };
 
-  // 일괄 입금 확인
-  const handleBulkConfirm = async () => {
-    if (selectedIds.length === 0) {
-      alert('선택된 청구가 없습니다.');
-      return;
-    }
-    
-    try {
-      const result = await billingsApi.confirmBulk({
-        billing_ids: selectedIds,
-        payment_date: confirmForm.payment_date,
-        payment_method: confirmForm.payment_method
-      });
-      alert(result.data.message);
-      setShowConfirmModal(false);
-      resetConfirmForm();
-      setSelectedIds([]);
-      setBulkMode(false);
-      loadData();
-    } catch (error) {
-      console.error('일괄 입금 확인 오류:', error);
-      alert('일괄 입금 확인에 실패했습니다.');
-    }
-  };
 
   // 단건 세금계산서 발행
   const handleTaxInvoice = async () => {
@@ -330,33 +304,10 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('세금계산서 발행 오류:', error);
-      alert('세금계산서 발행 처리에 실패했습니다.');
+      showError('세금계산서 발행 처리에 실패했습니다.');
     }
   };
 
-  // 일괄 세금계산서 발행
-  const handleBulkTaxInvoice = async () => {
-    if (selectedIds.length === 0) {
-      alert('선택된 청구가 없습니다.');
-      return;
-    }
-    
-    try {
-      const result = await billingsApi.taxInvoiceBulk({
-        billing_ids: selectedIds,
-        issue_date: taxInvoiceForm.issue_date
-      });
-      alert(result.data.message);
-      setShowTaxInvoiceModal(false);
-      resetTaxInvoiceForm();
-      setSelectedIds([]);
-      setBulkMode(false);
-      loadData();
-    } catch (error) {
-      console.error('일괄 세금계산서 발행 오류:', error);
-      alert('일괄 세금계산서 발행에 실패했습니다.');
-    }
-  };
 
   const handleAddIncome = async () => {
     try {
@@ -374,7 +325,7 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('수입 등록 오류:', error);
-      alert('수입 등록에 실패했습니다.');
+      showError('수입 등록에 실패했습니다.');
     }
   };
 
@@ -400,17 +351,16 @@ export default function Income() {
       setShowDepositConfirmModal(false);
       setSelectedDeposit(null);
       loadData();
-      alert('보증금 입금이 확인되었습니다.');
+      showSuccess('보증금 입금이 확인되었습니다.');
     } catch (error) {
       console.error('보증금 입금 확인 오류:', error);
-      alert('보증금 입금 확인에 실패했습니다.');
+      showError('보증금 입금 확인에 실패했습니다.');
     }
   };
 
   // 사용료 전환 모달 열기
   const openConversionModal = (deposit: Transaction) => {
     setSelectedDeposit(deposit);
-    // @ts-ignore - contract_end_date는 조인된 필드
     const endDate = deposit.contract_end_date?.split('T')[0] || format(new Date(), 'yyyy-MM-dd');
     setConversionForm({ conversion_date: endDate });
     setShowConversionModal(true);
@@ -425,10 +375,10 @@ export default function Income() {
       setShowConversionModal(false);
       setSelectedDeposit(null);
       loadData();
-      alert('보증금이 사용료로 전환되었습니다.');
+      showSuccess('보증금이 사용료로 전환되었습니다.');
     } catch (error) {
       console.error('보증금 전환 오류:', error);
-      alert('보증금 전환에 실패했습니다.');
+      showError('보증금 전환에 실패했습니다.');
     }
   };
 
@@ -448,7 +398,7 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('세금계산서 발행 오류:', error);
-      alert('세금계산서 발행에 실패했습니다.');
+      showError('세금계산서 발행에 실패했습니다.');
     }
   };
 
@@ -468,7 +418,7 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('거래 수정 오류:', error);
-      alert('거래 수정에 실패했습니다.');
+      showError('거래 수정에 실패했습니다.');
     }
   };
 
@@ -513,7 +463,7 @@ export default function Income() {
     try {
       await billingsApi.updateStatus(selectedBilling.id, {
         status: billingEditForm.status,
-        payment_date: billingEditForm.status === '완료' ? billingEditForm.payment_date : null,
+        payment_date: billingEditForm.status === '완료' ? billingEditForm.payment_date : undefined,
         notes: billingEditForm.notes
       });
       setShowBillingEditModal(false);
@@ -521,7 +471,7 @@ export default function Income() {
       loadData();
     } catch (error) {
       console.error('청구 수정 오류:', error);
-      alert('청구 수정에 실패했습니다.');
+      showError('청구 수정에 실패했습니다.');
     }
   };
 
@@ -532,10 +482,10 @@ export default function Income() {
     try {
       await billingsApi.cancelPayment(billing.id);
       loadData();
-      alert('입금이 취소되었습니다.');
+      showSuccess('입금이 취소되었습니다.');
     } catch (error: any) {
       console.error('입금 취소 오류:', error);
-      alert(error.response?.data?.error || '입금 취소에 실패했습니다.');
+      showError(error.response?.data?.error || '입금 취소에 실패했습니다.');
     }
   };
 
@@ -570,29 +520,18 @@ export default function Income() {
     });
   };
 
-  const openConfirmModal = (billing?: Billing) => {
-    if (billing) {
-      setSelectedBilling(billing);
-      setBulkMode(false);
-      // 기본값으로 VAT 포함 금액 설정
-      setConfirmForm(prev => ({
-        ...prev,
-        payment_amount: billing.amount
-      }));
-      setPaymentMode('vat_included');
-    } else {
-      setBulkMode(true);
-    }
+  const openConfirmModal = (billing: Billing) => {
+    setSelectedBilling(billing);
+    setConfirmForm(prev => ({
+      ...prev,
+      payment_amount: billing.amount
+    }));
+    setPaymentMode('vat_included');
     setShowConfirmModal(true);
   };
 
-  const openTaxInvoiceModal = (billing?: Billing) => {
-    if (billing) {
-      setSelectedBilling(billing);
-      setBulkMode(false);
-    } else {
-      setBulkMode(true);
-    }
+  const openTaxInvoiceModal = (billing: Billing) => {
+    setSelectedBilling(billing);
     setShowTaxInvoiceModal(true);
   };
 
@@ -606,25 +545,49 @@ export default function Income() {
     setShowAddModal(true);
   };
 
-  const toggleSelect = (id: number) => {
-    setSelectedIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
-    );
+  const toggleCalcSelect = (key: string, amount: number) => {
+    setCalcSelections(prev => {
+      const next = { ...prev };
+      if (key in next) delete next[key];
+      else next[key] = amount;
+      return next;
+    });
   };
 
-  const toggleSelectAll = (billings: Billing[]) => {
-    const ids = billings.map(b => b.id);
-    const allSelected = ids.every(id => selectedIds.includes(id));
+  const calcSelectedCount = Object.keys(calcSelections).length;
+  const calcTotal = Object.values(calcSelections).reduce((sum, a) => sum + a, 0);
+
+  const getAllCalcItems = () => {
+    const allItems: Record<string, number> = {};
+    const billingRoomIdSet = new Set(billings.map(b => b.room_id));
+    billings.forEach(b => { allItems[`b-${b.id}`] = b.amount; });
+    occupiedRooms.forEach(r => {
+      if (!billingRoomIdSet.has(r.id)) {
+        allItems[`r-${r.id}`] = r.monthly_rent_vat || 0;
+      }
+    });
+    [...postboxIncome, ...penaltyIncome, ...depositConversionIncome, ...oneTimeIncome].forEach(t => {
+      allItems[`t-${t.id}`] = t.amount;
+    });
+    return allItems;
+  };
+
+  const toggleCalcSelectAll = () => {
+    const allItems = getAllCalcItems();
+    const allKeys = Object.keys(allItems);
+    const allSelected = allKeys.length > 0 && allKeys.every(key => key in calcSelections);
     if (allSelected) {
-      setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
+      setCalcSelections({});
     } else {
-      setSelectedIds(prev => [...new Set([...prev, ...ids])]);
+      setCalcSelections(allItems);
     }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
-  };
+  const isAllCalcSelected = (() => {
+    const allItems = getAllCalcItems();
+    const allKeys = Object.keys(allItems);
+    return allKeys.length > 0 && allKeys.every(key => key in calcSelections);
+  })();
 
   const prevMonth = () => {
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
@@ -642,12 +605,11 @@ export default function Income() {
     );
   }
 
-  const selectedPendingCount = pendingBillings.filter(b => selectedIds.includes(b.id)).length;
   const meetingRooms = rooms.filter(r => r.room_type === '회의실');
   const hotDesks = rooms.filter(r => r.room_type === '자유석');
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 ${calcSelectedCount > 0 ? 'pb-20' : ''}`}>
       {/* 헤더 */}
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold text-slate-900">💰 수입 관리</h1>
@@ -688,7 +650,7 @@ export default function Income() {
             </div>
             <div>
               <p className="text-sm text-slate-700 font-medium">미입금</p>
-              <p className="text-xl font-bold text-slate-900">{unpaidRooms.length}건</p>
+              <p className="text-xl font-bold text-slate-900">{totalRoomCount - completedBillings.length}건</p>
               <p className="text-sm text-slate-600">{formatCurrency(unpaidTotal)}</p>
             </div>
           </div>
@@ -728,43 +690,11 @@ export default function Income() {
             <div>
               <p className="text-sm text-slate-700 font-medium">이달 총 예상</p>
               <p className="text-xl font-bold text-slate-900">{formatCurrency(totalExpected)}</p>
-              <p className="text-sm text-slate-600">입주 {occupiedRooms.length}호실 기준</p>
+              <p className="text-sm text-slate-600">입주 {totalRoomCount}호실 기준</p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* 일괄 처리 버튼 */}
-      {selectedPendingCount > 0 && (
-        <div className="card p-4 border-l-[3px] border-l-primary-500">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <CheckSquare className="w-5 h-5 text-primary-600" />
-              <span className="font-medium text-slate-800">
-                {selectedPendingCount}건 선택됨 ({formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))})
-              </span>
-            </div>
-            {isAdmin && (
-              <div className="flex gap-2">
-                <button
-                  onClick={() => openTaxInvoiceModal()}
-                  className="btn-secondary flex items-center gap-2"
-                >
-                  <FileText className="w-4 h-4" />
-                  일괄 세금계산서
-                </button>
-                <button
-                  onClick={() => openConfirmModal()}
-                  className="btn-primary flex items-center gap-2"
-                >
-                  <Check className="w-4 h-4" />
-                  일괄 입금 확인
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* 📋 호실별 임대료 */}
       <div className="card">
@@ -773,24 +703,22 @@ export default function Income() {
             <Building2 className="w-5 h-5 text-amber-600" />
             📋 호실별 임대료 ({occupiedRooms.length}개 호실 입주중)
           </h3>
-          {pendingBillings.length > 0 && (
-            <button
-              onClick={() => toggleSelectAll(pendingBillings)}
-              className="text-sm text-slate-700 hover:text-slate-800 flex items-center gap-1"
-            >
-              {pendingBillings.every(b => selectedIds.includes(b.id)) ? (
-                <>
-                  <CheckSquare className="w-4 h-4" />
-                  대기 전체 해제
-                </>
-              ) : (
-                <>
-                  <Square className="w-4 h-4" />
-                  대기 전체 선택
-                </>
-              )}
-            </button>
-          )}
+          <button
+            onClick={toggleCalcSelectAll}
+            className="text-sm text-slate-700 hover:text-slate-800 flex items-center gap-1"
+          >
+            {isAllCalcSelected ? (
+              <>
+                <CheckSquare className="w-4 h-4 text-teal-600" />
+                전체 해제
+              </>
+            ) : (
+              <>
+                <Square className="w-4 h-4" />
+                전체 선택
+              </>
+            )}
+          </button>
         </div>
         <div className="divide-y divide-slate-100 max-h-[500px] overflow-y-auto">
           {occupiedRooms.length === 0 ? (
@@ -801,44 +729,26 @@ export default function Income() {
             occupiedRooms
               .sort((a, b) => parseInt(a.room_number) - parseInt(b.room_number))
               .map((room) => {
-                const { status: billingStatus, billing } = getRoomBillingStatus(room.id);
-                const isPending = billingStatus === '대기';
-                const isCompleted = billingStatus === '완료';
-                const isNotGenerated = billingStatus === '미생성';
-                
-                // 연체 여부 확인 (납부기한 초과 && 미완료)
-                const isOverdue = billing && isPending && new Date(billing.due_date) < new Date();
-                
-                // 상태 결정
-                const getStatusInfo = () => {
-                  if (isNotGenerated) return { label: '미입금', color: 'bg-slate-100 text-slate-600', icon: '⚪' };
-                  if (isCompleted && billing?.tax_invoice_issued) return { label: '세금계산서', color: 'bg-purple-100 text-purple-700', icon: '📄' };
-                  if (isCompleted) return { label: '완료', color: 'bg-coral-50 text-coral-500', icon: '✅' };
-                  if (isOverdue) return { label: '연체', color: 'bg-rose-100 text-rose-700', icon: '🔴' };
-                  if (isPending) return { label: '대기', color: 'bg-amber-100 text-amber-700', icon: '🟡' };
-                  return { label: '-', color: 'bg-slate-100 text-slate-600', icon: '' };
-                };
-                
-                const statusInfo = getStatusInfo();
-                
+                const { billing } = getRoomBillingStatus(room.id);
+                const isConfirmed = billing?.status === '완료';
+                const expectedAmount = billing?.amount || room.monthly_rent_vat || 0;
+                const confirmedAmount = isConfirmed ? billing!.amount : 0;
+                const calcKey = billing ? `b-${billing.id}` : `r-${room.id}`;
+
                 return (
                   <div key={room.id} className="p-4 flex items-center gap-4 hover:bg-slate-50">
-                    {/* 체크박스 - 대기 상태인 경우만 선택 가능 */}
-                    {billing && isPending ? (
-                      <button onClick={() => toggleSelect(billing.id)} className="p-1">
-                        {selectedIds.includes(billing.id) ? (
-                          <CheckSquare className="w-5 h-5 text-primary-600" />
-                        ) : (
-                          <Square className="w-5 h-5 text-slate-400" />
-                        )}
-                      </button>
-                    ) : (
-                      <div className="w-7" />
-                    )}
+                    {/* 체크박스 */}
+                    <button onClick={() => toggleCalcSelect(calcKey, expectedAmount)} className="p-1">
+                      {(calcKey in calcSelections) ? (
+                        <CheckSquare className="w-5 h-5 text-teal-600" />
+                      ) : (
+                        <Square className="w-5 h-5 text-slate-400" />
+                      )}
+                    </button>
 
                     <div className="flex-1 flex items-center gap-4">
                       <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        isCompleted ? 'bg-coral-50' : isOverdue ? 'bg-rose-100' : isPending ? 'bg-amber-100' : 'bg-slate-100'
+                        isConfirmed ? 'bg-coral-50' : 'bg-slate-100'
                       }`}>
                         <span className="text-sm font-bold text-slate-900">{room.room_number}</span>
                       </div>
@@ -846,13 +756,8 @@ export default function Income() {
                         <div className="font-medium text-slate-900">{room.company_name || '-'}</div>
                         <div className="text-sm text-slate-500 flex items-center gap-3 flex-wrap">
                           <span>📅 매월 {room.payment_day || 10}일</span>
-                          {isCompleted && billing?.payment_date && (
+                          {isConfirmed && billing?.payment_date && (
                             <span className="text-slate-600">입금: {format(new Date(billing.payment_date), 'M/d')}</span>
-                          )}
-                          {(isPending || isOverdue) && billing?.due_date && (
-                            <span className="text-slate-600">
-                              납부기한: {format(new Date(billing.due_date), 'M/d')}
-                            </span>
                           )}
                         </div>
                       </div>
@@ -860,16 +765,25 @@ export default function Income() {
 
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <div className="font-bold text-slate-900">{formatCurrency(billing?.amount || room.monthly_rent_vat || 0)}</div>
+                        <div className="text-xs text-slate-400">예정 {formatCurrency(expectedAmount)}</div>
+                        <div className={`font-bold ${isConfirmed ? 'text-slate-900' : 'text-slate-300'}`}>
+                          {isConfirmed ? formatCurrency(confirmedAmount) : '0원'}
+                        </div>
                       </div>
-                      
+
                       {/* 상태 뱃지 */}
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium min-w-[70px] justify-center ${statusInfo.color}`}>
-                        {statusInfo.icon} {statusInfo.label}
-                      </span>
-                      
+                      {isConfirmed ? (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium min-w-[70px] justify-center bg-coral-50 text-coral-500">
+                          {billing?.tax_invoice_issued ? '📄 세금계산서' : '✅ 입금확인'}
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-medium min-w-[70px] justify-center bg-slate-100 text-slate-600">
+                          미입금
+                        </span>
+                      )}
+
                       {/* 액션 버튼 */}
-                      {isAdmin && isNotGenerated && (
+                      {isAdmin && !isConfirmed && !billing && (
                         <button
                           onClick={() => handleCreateSingleBilling(room.id, room.room_number)}
                           className="btn-secondary flex items-center gap-1 text-sm"
@@ -879,7 +793,7 @@ export default function Income() {
                         </button>
                       )}
 
-                      {isAdmin && (isPending || isOverdue) && billing && (
+                      {isAdmin && !isConfirmed && billing && (
                         <div className="flex gap-1">
                           {!billing.tax_invoice_issued && (
                             <button
@@ -892,7 +806,7 @@ export default function Income() {
                           )}
                           <button
                             onClick={() => openConfirmModal(billing)}
-                            className={`flex items-center gap-1 ${isOverdue ? 'btn-danger' : 'btn-primary'}`}
+                            className="btn-primary flex items-center gap-1"
                           >
                             <Check className="w-4 h-4" />
                             입금 확인
@@ -900,7 +814,7 @@ export default function Income() {
                         </div>
                       )}
 
-                      {isAdmin && isCompleted && billing && (
+                      {isAdmin && isConfirmed && billing && (
                         <div className="flex gap-1">
                           {!billing.tax_invoice_issued && (
                             <button
@@ -935,7 +849,7 @@ export default function Income() {
         </div>
         
         {/* 📊 총계 비교 */}
-        {occupiedRooms.length > 0 && (
+        {(occupiedRooms.length > 0 || billings.length > 0) && (
           <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-t-2 border-amber-200">
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
@@ -952,7 +866,7 @@ export default function Income() {
               <div className="flex items-center gap-2">
                 <span className="text-sm text-slate-600">⏳ 미입금:</span>
                 <span className="text-lg font-bold text-slate-900">{formatCurrency(unpaidTotal)}</span>
-                <span className="text-sm text-slate-600">({unpaidRooms.length}개 호실)</span>
+                <span className="text-sm text-slate-600">({totalRoomCount - completedBillings.length}개 호실)</span>
               </div>
             </div>
           </div>
@@ -973,6 +887,13 @@ export default function Income() {
             {postboxIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
+                                    <button onClick={() => toggleCalcSelect(`t-${transaction.id}`, transaction.amount)} className="p-1">
+                    {(`t-${transaction.id}` in calcSelections) ? (
+                      <CheckSquare className="w-5 h-5 text-teal-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
                   <div className="w-12 h-12 bg-coral-100 rounded-xl flex items-center justify-center">
                     <Mailbox className="w-6 h-6 text-coral-600" />
                   </div>
@@ -1035,6 +956,13 @@ export default function Income() {
             {penaltyIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
+                                    <button onClick={() => toggleCalcSelect(`t-${transaction.id}`, transaction.amount)} className="p-1">
+                    {(`t-${transaction.id}` in calcSelections) ? (
+                      <CheckSquare className="w-5 h-5 text-teal-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
                   <div className="w-12 h-12 bg-orange-100 rounded-xl flex items-center justify-center">
                     <AlertTriangle className="w-6 h-6 text-orange-600" />
                   </div>
@@ -1097,6 +1025,13 @@ export default function Income() {
             {depositConversionIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
+                                    <button onClick={() => toggleCalcSelect(`t-${transaction.id}`, transaction.amount)} className="p-1">
+                    {(`t-${transaction.id}` in calcSelections) ? (
+                      <CheckSquare className="w-5 h-5 text-teal-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
                   <div className="w-12 h-12 bg-coral-50 rounded-xl flex items-center justify-center">
                     <RefreshCw className="w-6 h-6 text-coral-500" />
                   </div>
@@ -1185,6 +1120,13 @@ export default function Income() {
             oneTimeIncome.map((transaction) => (
               <div key={transaction.id} className="p-4 flex items-center justify-between hover:bg-slate-50">
                 <div className="flex items-center gap-4">
+                                    <button onClick={() => toggleCalcSelect(`t-${transaction.id}`, transaction.amount)} className="p-1">
+                    {(`t-${transaction.id}` in calcSelections) ? (
+                      <CheckSquare className="w-5 h-5 text-teal-600" />
+                    ) : (
+                      <Square className="w-5 h-5 text-slate-400" />
+                    )}
+                  </button>
                   <div className="w-12 h-12 bg-cyan-100 rounded-xl flex items-center justify-center">
                     <Coffee className="w-6 h-6 text-cyan-600" />
                   </div>
@@ -1240,7 +1182,6 @@ export default function Income() {
                           {deposit.room_number}호 | {deposit.company_name}
                         </div>
                         <div className="text-sm text-slate-500">
-                          {/* @ts-ignore */}
                           계약시작: {deposit.contract_start_date ? format(new Date(deposit.contract_start_date), 'yy.MM.dd') : '-'}
                         </div>
                       </div>
@@ -1285,9 +1226,7 @@ export default function Income() {
                           {deposit.room_number}호 | {deposit.company_name}
                         </div>
                         <div className="text-sm text-slate-500">
-                          {/* @ts-ignore */}
                           계약종료: {deposit.contract_end_date ? format(new Date(deposit.contract_end_date), 'yy.MM.dd') : '-'}
-                          {/* @ts-ignore */}
                           {deposit.payment_day && ` | 납부일: 매월 ${deposit.payment_day}일`}
                         </div>
                       </div>
@@ -1323,14 +1262,14 @@ export default function Income() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900">
-                {bulkMode ? `일괄 입금 확인 (${selectedPendingCount}건)` : '입금 확인'}
+                입금 확인
               </h3>
               <button onClick={() => setShowConfirmModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
-              {!bulkMode && selectedBilling && (
+              {selectedBilling && (
                 <>
                   {/* 청구 정보 */}
                   <div className="p-4 bg-slate-50 rounded-xl">
@@ -1429,17 +1368,6 @@ export default function Income() {
                 </>
               )}
 
-              {bulkMode && (
-                <div className="p-4 bg-primary-50 rounded-xl">
-                  <div className="text-sm text-primary-600">선택된 청구</div>
-                  <div className="font-bold text-primary-700">{selectedPendingCount}건</div>
-                  <div className="text-lg font-bold text-primary-800">
-                    {formatCurrency(pendingBillings.filter(b => selectedIds.includes(b.id)).reduce((sum, b) => sum + b.amount, 0))}
-                  </div>
-                  <p className="text-xs text-primary-600 mt-2">* 일괄 처리 시 청구액 그대로 입금 처리됩니다.</p>
-                </div>
-              )}
-
               <div>
                 <label className="label">입금일</label>
                 <input
@@ -1464,18 +1392,16 @@ export default function Income() {
                 </select>
               </div>
 
-              {!bulkMode && (
-                <div>
-                  <label className="label">메모 (선택)</label>
-                  <input
-                    type="text"
-                    value={confirmForm.notes}
-                    onChange={(e) => setConfirmForm(prev => ({ ...prev, notes: e.target.value }))}
-                    className="input"
-                    placeholder="메모를 입력하세요"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="label">메모 (선택)</label>
+                <input
+                  type="text"
+                  value={confirmForm.notes}
+                  onChange={(e) => setConfirmForm(prev => ({ ...prev, notes: e.target.value }))}
+                  className="input"
+                  placeholder="메모를 입력하세요"
+                />
+              </div>
             </div>
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
@@ -1485,10 +1411,10 @@ export default function Income() {
                 취소
               </button>
               <button
-                onClick={bulkMode ? handleBulkConfirm : handleConfirm}
+                onClick={handleConfirm}
                 className="btn-primary flex-1"
               >
-                {bulkMode ? `${selectedPendingCount}건 입금 확인` : `${formatCurrency(confirmForm.payment_amount)} 입금 확인`}
+                {formatCurrency(confirmForm.payment_amount)} 입금 확인
               </button>
             </div>
           </div>
@@ -1496,37 +1422,28 @@ export default function Income() {
       )}
 
       {/* 세금계산서 발행 모달 */}
-      {showTaxInvoiceModal && (
+      {showTaxInvoiceModal && selectedBilling && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-purple-600" />
-                {bulkMode ? `일괄 세금계산서 발행 (${selectedPendingCount}건)` : '세금계산서 발행'}
+                세금계산서 발행
               </h3>
               <button onClick={() => setShowTaxInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-4">
-              {!bulkMode && selectedBilling && (
-                <div className="p-4 bg-purple-50 rounded-xl">
-                  <div className="text-sm text-slate-500">청구 정보</div>
-                  <div className="font-medium text-slate-900">
-                    {selectedBilling.room_number}호 | {selectedBilling.company_name}
-                  </div>
-                  <div className="text-lg font-bold text-slate-900">
-                    {formatCurrency(selectedBilling.amount)}
-                  </div>
+              <div className="p-4 bg-purple-50 rounded-xl">
+                <div className="text-sm text-slate-500">청구 정보</div>
+                <div className="font-medium text-slate-900">
+                  {selectedBilling.room_number}호 | {selectedBilling.company_name}
                 </div>
-              )}
-
-              {bulkMode && (
-                <div className="p-4 bg-purple-50 rounded-xl">
-                  <div className="text-sm text-slate-500">선택된 청구</div>
-                  <div className="font-bold text-slate-900">{selectedPendingCount}건</div>
+                <div className="text-lg font-bold text-slate-900">
+                  {formatCurrency(selectedBilling.amount)}
                 </div>
-              )}
+              </div>
 
               <div>
                 <label className="label">발행일</label>
@@ -1538,18 +1455,16 @@ export default function Income() {
                 />
               </div>
 
-              {!bulkMode && (
-                <div>
-                  <label className="label">세금계산서 번호 (선택)</label>
-                  <input
-                    type="text"
-                    value={taxInvoiceForm.invoice_number}
-                    onChange={(e) => setTaxInvoiceForm(prev => ({ ...prev, invoice_number: e.target.value }))}
-                    className="input"
-                    placeholder="세금계산서 번호를 입력하세요"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="label">세금계산서 번호 (선택)</label>
+                <input
+                  type="text"
+                  value={taxInvoiceForm.invoice_number}
+                  onChange={(e) => setTaxInvoiceForm(prev => ({ ...prev, invoice_number: e.target.value }))}
+                  className="input"
+                  placeholder="세금계산서 번호를 입력하세요"
+                />
+              </div>
             </div>
             <div className="p-6 border-t border-slate-200 flex gap-3">
               <button
@@ -1559,10 +1474,10 @@ export default function Income() {
                 취소
               </button>
               <button
-                onClick={bulkMode ? handleBulkTaxInvoice : handleTaxInvoice}
+                onClick={handleTaxInvoice}
                 className="btn-primary flex-1"
               >
-                {bulkMode ? `${selectedPendingCount}건 발행` : '발행'}
+                발행
               </button>
             </div>
           </div>
@@ -2055,6 +1970,33 @@ export default function Income() {
         </div>
       )}
 
+      {/* 합계 계산 하단 바 */}
+      {calcSelectedCount > 0 && (
+        <div className="fixed bottom-0 left-0 right-0 bg-white border-t-2 border-teal-400 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] z-40">
+          <div className="max-w-screen-xl mx-auto px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Calculator className="w-5 h-5 text-teal-600" />
+              <span className="font-medium text-slate-700">
+                {calcSelectedCount}건 선택
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-2xl font-bold text-slate-900">
+                {formatCurrency(calcTotal)}
+              </span>
+              {calcSelectedCount > 0 && (
+                <button
+                  onClick={() => setCalcSelections({})}
+                  className="btn-secondary text-sm"
+                >
+                  초기화
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 보증금 → 사용료 전환 모달 */}
       {showConversionModal && selectedDeposit && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -2078,7 +2020,6 @@ export default function Income() {
                   {formatCurrency(selectedDeposit.amount)}
                 </div>
                 <div className="text-sm text-slate-500 mt-2">
-                  {/* @ts-ignore */}
                   계약기간: {selectedDeposit.contract_start_date ? format(new Date(selectedDeposit.contract_start_date), 'yy.MM.dd') : '-'} ~ {selectedDeposit.contract_end_date ? format(new Date(selectedDeposit.contract_end_date), 'yy.MM.dd') : '-'}
                 </div>
               </div>

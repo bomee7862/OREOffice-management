@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { authApi } from '../api';
 import { User } from '../types';
 import { useAuth } from '../contexts/AuthContext';
+import { showError } from '../utils/toast';
 
 export default function Users() {
   const { user: currentUser } = useAuth();
@@ -75,13 +76,13 @@ export default function Users() {
       setShowModal(false);
       fetchUsers();
     } catch (error: any) {
-      alert(error.response?.data?.error || '저장에 실패했습니다.');
+      showError(error.response?.data?.error || '저장에 실패했습니다.');
     }
   };
 
   const handleDelete = async (user: User) => {
     if (user.id === currentUser?.id) {
-      alert('자기 자신은 삭제할 수 없습니다.');
+      showError('자기 자신은 삭제할 수 없습니다.');
       return;
     }
     if (!confirm(`"${user.display_name}" 사용자를 삭제하시겠습니까?`)) return;
@@ -89,7 +90,7 @@ export default function Users() {
       await authApi.deleteUser(user.id);
       fetchUsers();
     } catch (error: any) {
-      alert(error.response?.data?.error || '삭제에 실패했습니다.');
+      showError(error.response?.data?.error || '삭제에 실패했습니다.');
     }
   };
 

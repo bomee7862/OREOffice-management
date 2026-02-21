@@ -15,11 +15,21 @@ import { authenticate, AuthRequest } from './middleware/auth';
 
 dotenv.config();
 
+// 필수 환경변수 검증
+if (!process.env.JWT_SECRET) {
+  console.error('JWT_SECRET 환경변수가 설정되지 않았습니다. .env 파일을 확인하세요.');
+  process.exit(1);
+}
+
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = parseInt(process.env.PORT || '3001', 10);
+const HOST = process.env.HOST || '0.0.0.0';
 
 // 미들웨어
-app.use(cors());
+const corsOptions = process.env.CORS_ORIGIN
+  ? { origin: process.env.CORS_ORIGIN.split(','), credentials: true }
+  : undefined;
+app.use(cors(corsOptions));
 app.use(express.json());
 
 // 정적 파일 서빙 (업로드된 파일)
@@ -51,6 +61,6 @@ app.use('/api/settlements', authenticate, viewerWriteBlock, settlementRoutes);
 app.use('/api/dashboard', authenticate, viewerWriteBlock, dashboardRoutes);
 app.use('/api/uploads', authenticate, viewerWriteBlock, uploadRoutes);
 
-app.listen(PORT, '127.0.0.1', () => {
-  console.log(`🚀 서버가 http://127.0.0.1:${PORT} 에서 실행중입니다.`);
+app.listen(PORT, HOST, () => {
+  console.log(`서버가 http://${HOST}:${PORT} 에서 실행중입니다.`);
 });

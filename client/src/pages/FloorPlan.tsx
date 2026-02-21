@@ -7,6 +7,8 @@ import { ko } from 'date-fns/locale';
 
 import PostBoxIcon from '../components/PostBoxIcon';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/format';
+import { showSuccess, showError, showInfo, showDetailedSuccess } from '../utils/toast';
 
 type ViewTab = 'rooms' | 'postbox';
 
@@ -307,15 +309,15 @@ export default function FloorPlan() {
     e.stopPropagation();
     
     if (!room.company_name) {
-      alert('공실은 복사할 수 없습니다.');
+      showInfo('공실은 복사할 수 없습니다.');
       return;
     }
 
     // 빈 호실 찾기
     const emptyRoom = rooms.find(r => r.status === '공실' && r.room_type !== '회의실' && r.room_type !== '자유석');
-    
+
     if (!emptyRoom) {
-      alert('복사할 수 있는 빈 호실이 없습니다.');
+      showInfo('복사할 수 있는 빈 호실이 없습니다.');
       return;
     }
 
@@ -328,7 +330,7 @@ export default function FloorPlan() {
       const originalContract = contracts.find(c => c.room_id === room.id && c.is_active);
       
       if (!originalContract) {
-        alert('원본 계약 정보를 찾을 수 없습니다.');
+        showError('원본 계약 정보를 찾을 수 없습니다.');
         return;
       }
 
@@ -351,11 +353,11 @@ export default function FloorPlan() {
         card_y: newY
       });
 
-      alert(`${emptyRoom.room_number}호에 복사되었습니다.`);
+      showSuccess(`${emptyRoom.room_number}호에 복사되었습니다.`);
       await loadData();
     } catch (error) {
       console.error('카드 복사 오류:', error);
-      alert('카드 복사에 실패했습니다.');
+      showError('카드 복사에 실패했습니다.');
     }
   };
 
@@ -365,7 +367,7 @@ export default function FloorPlan() {
     e.stopPropagation();
 
     if (!room.company_name) {
-      alert('공실은 삭제할 수 없습니다.');
+      showInfo('공실은 삭제할 수 없습니다.');
       return;
     }
 
@@ -386,7 +388,7 @@ export default function FloorPlan() {
 
     const activeContract = contracts.find(c => c.room_id === selectedRoom.id && c.is_active);
     if (!activeContract) {
-      alert('활성 계약을 찾을 수 없습니다.');
+      showError('활성 계약을 찾을 수 없습니다.');
       return;
     }
 
@@ -397,13 +399,13 @@ export default function FloorPlan() {
       closeModal();
 
       if (deleteMode === 'hard') {
-        alert('계약이 완전히 삭제되었습니다.\n관련 거래내역도 함께 삭제되었습니다.');
+        showDetailedSuccess(['계약이 완전히 삭제되었습니다.', '관련 거래내역도 함께 삭제되었습니다.']);
       } else {
-        alert('계약이 취소되고 공실로 전환되었습니다.\n기록은 보존됩니다.');
+        showDetailedSuccess(['계약이 취소되고 공실로 전환되었습니다.', '기록은 보존됩니다.']);
       }
     } catch (error) {
       console.error('계약 삭제 오류:', error);
-      alert('계약 삭제에 실패했습니다.');
+      showError('계약 삭제에 실패했습니다.');
     }
   };
 
@@ -442,10 +444,10 @@ export default function FloorPlan() {
       await loadData();
       closeContractModal();
       closeModal();
-      alert('계약이 등록되었습니다.');
+      showSuccess('계약이 등록되었습니다.');
     } catch (error) {
       console.error('계약 등록 실패:', error);
-      alert('계약 등록에 실패했습니다.');
+      showError('계약 등록에 실패했습니다.');
     }
   };
 
@@ -476,10 +478,10 @@ export default function FloorPlan() {
       await loadData();
       closeContractModal();
       closeModal();
-      alert('정보가 수정되었습니다.');
+      showSuccess('정보가 수정되었습니다.');
     } catch (error) {
       console.error('정보 수정 실패:', error);
-      alert('정보 수정에 실패했습니다.');
+      showError('정보 수정에 실패했습니다.');
     }
   };
 
@@ -518,20 +520,36 @@ export default function FloorPlan() {
       closeModal();
 
       if (isPostBox) {
-        alert(`계약이 종료되었습니다.\n\nPOST BOX ${selectedRoom.room_number.replace('PB', '')}가 공실로 전환되었습니다.\n입주사 정보는 보관됩니다.`);
+        showDetailedSuccess([
+          '계약이 종료되었습니다.',
+          `POST BOX ${selectedRoom.room_number.replace('PB', '')}가 공실로 전환되었습니다.`,
+          '입주사 정보는 보관됩니다.'
+        ]);
       } else if (terminationForm.type === '중도종료') {
         const penaltyAmount = selectedRoom.deposit || 0;
         if (penaltyAmount > 0) {
-          alert(`계약이 종료되었습니다.\n\n종료유형: 중도종료\n위약금: ${formatCurrency(penaltyAmount)} (수입 등록됨)`);
+          showDetailedSuccess([
+            '계약이 종료되었습니다.',
+            '종료유형: 중도종료',
+            `위약금: ${formatCurrency(penaltyAmount)} (수입 등록됨)`
+          ]);
         } else {
-          alert(`계약이 종료되었습니다.\n\n종료유형: 중도종료\n위약금: 없음 (보증금 0원)`);
+          showDetailedSuccess([
+            '계약이 종료되었습니다.',
+            '종료유형: 중도종료',
+            '위약금: 없음 (보증금 0원)'
+          ]);
         }
       } else {
-        alert(`계약이 종료되었습니다.\n\n종료유형: 만기종료\n보증금: 종료월 사용료로 차감`);
+        showDetailedSuccess([
+          '계약이 종료되었습니다.',
+          '종료유형: 만기종료',
+          '보증금: 종료월 사용료로 차감'
+        ]);
       }
     } catch (error) {
       console.error('계약 종료 실패:', error);
-      alert('계약 종료에 실패했습니다.');
+      showError('계약 종료에 실패했습니다.');
     }
   };
 
@@ -544,15 +562,11 @@ export default function FloorPlan() {
       await roomsApi.updateStatus(selectedRoom.id, '공실');
       await loadData();
       closeModal();
-      alert('공실로 전환되었습니다.');
+      showSuccess('공실로 전환되었습니다.');
     } catch (error) {
       console.error('공실 전환 실패:', error);
-      alert('공실 전환에 실패했습니다.');
+      showError('공실 전환에 실패했습니다.');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
   };
 
   // 호실 필터링

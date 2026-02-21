@@ -428,10 +428,10 @@ router.delete('/:id', async (req, res) => {
 // 만료 예정 계약 조회
 router.get('/expiring/soon', async (req, res) => {
   try {
-    const { days = 30 } = req.query;
-    
+    const days = Math.max(1, Math.min(parseInt(req.query.days as string) || 30, 365));
+
     const result = await query(`
-      SELECT c.*, 
+      SELECT c.*,
         r.room_number,
         r.room_type,
         t.company_name,
@@ -440,7 +440,7 @@ router.get('/expiring/soon', async (req, res) => {
       FROM contracts c
       JOIN rooms r ON c.room_id = r.id
       JOIN tenants t ON c.tenant_id = t.id
-      WHERE c.is_active = true 
+      WHERE c.is_active = true
         AND c.end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '${days} days'
       ORDER BY c.end_date ASC
     `);

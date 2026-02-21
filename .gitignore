@@ -31,5 +31,10 @@ server/uploads/*
 # Database
 *.db
 *.sqlite
+database_backups/
+
+# Backup files
+*.backup
+*.backup2
 
 

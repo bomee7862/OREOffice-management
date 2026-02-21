@@ -6,6 +6,8 @@ import { format, differenceInDays, differenceInMonths } from 'date-fns';
 
 import PostBoxIcon from '../components/PostBoxIcon';
 import { useAuth } from '../contexts/AuthContext';
+import { formatCurrency } from '../utils/format';
+import { showSuccess, showError } from '../utils/toast';
 
 export default function Tenants() {
   const { isAdmin } = useAuth();
@@ -106,9 +108,6 @@ export default function Tenants() {
     return { label: '진행중', color: 'bg-primary-100 text-primary-700' };
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
-  };
 
   // 모달
   const openCreateModal = () => {
@@ -194,7 +193,7 @@ export default function Tenants() {
           notes: formData.notes
         });
         tenantId = editingTenant.id;
-        alert('입주사 정보가 수정되었습니다.');
+        showSuccess('입주사 정보가 수정되었습니다.');
       } else {
         const tenantRes = await tenantsApi.create({
           company_name: formData.company_name,
@@ -219,7 +218,7 @@ export default function Tenants() {
             management_fee: parseInt(formData.management_fee) || 0
           });
         }
-        alert('입주사가 등록되었습니다.');
+        showSuccess('입주사가 등록되었습니다.');
       }
 
       if (uploadingFiles.length > 0) {
@@ -234,7 +233,7 @@ export default function Tenants() {
       closeModal();
     } catch (error) {
       console.error('저장 실패:', error);
-      alert('저장에 실패했습니다.');
+      showError('저장에 실패했습니다.');
     }
   };
 
@@ -243,10 +242,10 @@ export default function Tenants() {
     try {
       await tenantsApi.delete(tenantId);
       await loadData();
-      alert('입주사가 삭제되었습니다.');
+      showSuccess('입주사가 삭제되었습니다.');
     } catch (error) {
       console.error('삭제 실패:', error);
-      alert('삭제에 실패했습니다. 활성 계약이 있을 수 있습니다.');
+      showError('삭제에 실패했습니다. 활성 계약이 있을 수 있습니다.');
     }
   };
 
@@ -255,10 +254,10 @@ export default function Tenants() {
     try {
       await uploadsApi.delete(docId);
       if (selectedTenant) await loadTenantDocuments(selectedTenant.id);
-      alert('문서가 삭제되었습니다.');
+      showSuccess('문서가 삭제되었습니다.');
     } catch (error) {
       console.error('문서 삭제 실패:', error);
-      alert('문서 삭제에 실패했습니다.');
+      showError('문서 삭제에 실패했습니다.');
     }
   };
 

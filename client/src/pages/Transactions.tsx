@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { transactionsApi, tenantsApi, contractsApi } from '../api';
 import { Transaction, Tenant, Contract, TransactionType, TransactionCategory } from '../types';
-import { Plus, Search, X, TrendingUp, TrendingDown, Filter } from 'lucide-react';
+import { Plus, X, TrendingUp, TrendingDown, Filter } from 'lucide-react';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { formatCurrency } from '../utils/format';
+import { showSuccess, showError } from '../utils/toast';
 
 const INCOME_CATEGORIES: TransactionCategory[] = ['임대료', '관리비', '보증금', '기타수입'];
 const EXPENSE_CATEGORIES: TransactionCategory[] = ['유지보수', '공과금', '인건비', '기타지출'];
@@ -103,10 +105,10 @@ export default function Transactions() {
       });
       await loadTransactions();
       closeModal();
-      alert('거래가 등록되었습니다.');
+      showSuccess('거래가 등록되었습니다.');
     } catch (error) {
       console.error('거래 등록 실패:', error);
-      alert('거래 등록에 실패했습니다.');
+      showError('거래 등록에 실패했습니다.');
     }
   };
 
@@ -116,15 +118,11 @@ export default function Transactions() {
     try {
       await transactionsApi.delete(id);
       await loadTransactions();
-      alert('거래가 삭제되었습니다.');
+      showSuccess('거래가 삭제되었습니다.');
     } catch (error) {
       console.error('거래 삭제 실패:', error);
-      alert('거래 삭제에 실패했습니다.');
+      showError('거래 삭제에 실패했습니다.');
     }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
   };
 
   // 통계

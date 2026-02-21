@@ -3,14 +3,14 @@ import { transactionsApi, billingsApi, dashboardApi, contractsApi } from '../api
 import { Transaction, Billing } from '../types';
 import { format, startOfMonth, endOfMonth, eachMonthOfInterval, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { 
+import {
   TrendingUp, TrendingDown, Search, Download, Calendar,
-  ChevronDown, ChevronUp, BarChart3, Wallet, ArrowUpRight, ArrowDownRight,
-  Building2, Mailbox
+  BarChart3, Wallet, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
+import { formatCurrency } from '../utils/format';
 
 // 수입 카테고리
 const INCOME_CATEGORIES = [
@@ -357,26 +357,6 @@ export default function Report() {
     return { incomeByCategory, expenseByCategory };
   }, [filteredTransactions, billings]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
-  };
-
-  // 전체 선택/해제
-  const toggleAllIncome = () => {
-    if (selectedIncomeCategories.length === INCOME_CATEGORIES.length) {
-      setSelectedIncomeCategories([]);
-    } else {
-      setSelectedIncomeCategories(INCOME_CATEGORIES.map(c => c.value));
-    }
-  };
-
-  const toggleAllExpense = () => {
-    if (selectedExpenseCategories.length === EXPENSE_CATEGORIES.length) {
-      setSelectedExpenseCategories([]);
-    } else {
-      setSelectedExpenseCategories(EXPENSE_CATEGORIES.map(c => c.value));
-    }
-  };
 
   // CSV 다운로드
   const exportCSV = () => {

@@ -12,6 +12,7 @@ import {
 
 import PostBoxIcon from '../components/PostBoxIcon';
 import { dashboardApi, billingsApi } from '../api';
+import { formatCurrency } from '../utils/format';
 import { DashboardSummary, Contract, Billing } from '../types';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -56,10 +57,6 @@ export default function Dashboard() {
     if (!summary) return 0;
     const expense = summary.monthly_finance.find(f => f.type === '지출');
     return expense ? parseInt(expense.total) : 0;
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
   };
 
   if (loading) {

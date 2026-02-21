@@ -4,21 +4,12 @@ import { Transaction } from '../types';
 import { format, startOfMonth, endOfMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import {
-  Plus, ChevronLeft, ChevronRight, Trash2, Edit2, X,
-  Zap, Droplets, Users, Sparkles, Wrench, Package, Megaphone, MoreHorizontal
+  Plus, ChevronLeft, ChevronRight, Trash2, Edit2, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-
-const EXPENSE_CATEGORIES = [
-  { value: '임대료', label: '임대료', icon: '🏠', color: 'bg-slate-100 text-slate-600' },
-  { value: '관리비', label: '관리비', icon: '🏢', color: 'bg-slate-100 text-slate-600' },
-  { value: '공과금', label: '공과금', icon: '💡', color: 'bg-yellow-100 text-yellow-600' },
-  { value: '청소미화', label: '청소/미화', icon: '🧹', color: 'bg-teal-100 text-teal-600' },
-  { value: '유지보수', label: '유지보수', icon: '🔧', color: 'bg-orange-100 text-orange-600' },
-  { value: '소모품', label: '소모품', icon: '📦', color: 'bg-purple-100 text-purple-600' },
-  { value: '마케팅', label: '마케팅', icon: '📣', color: 'bg-pink-100 text-pink-600' },
-  { value: '기타지출', label: '기타', icon: '📋', color: 'bg-gray-100 text-gray-600' },
-];
+import { formatCurrency } from '../utils/format';
+import { showError } from '../utils/toast';
+import { EXPENSE_CATEGORY_OPTIONS as EXPENSE_CATEGORIES } from '../constants/categories';
 
 export default function Expense() {
   const { isAdmin } = useAuth();
@@ -87,7 +78,7 @@ export default function Expense() {
       loadData();
     } catch (error) {
       console.error('저장 오류:', error);
-      alert('저장에 실패했습니다.');
+      showError('저장에 실패했습니다.');
     }
   };
 
@@ -99,7 +90,7 @@ export default function Expense() {
       loadData();
     } catch (error) {
       console.error('삭제 오류:', error);
-      alert('삭제에 실패했습니다.');
+      showError('삭제에 실패했습니다.');
     }
   };
 
@@ -129,10 +120,6 @@ export default function Expense() {
       payment_method: '계좌이체',
       notes: ''
     });
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('ko-KR').format(amount) + '원';
   };
 
   const prevMonth = () => {

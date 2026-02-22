@@ -2,6 +2,11 @@
 import PdfPrinter from 'pdfmake/js/Printer';
 import path from 'path';
 import type { TDocumentDefinitions, Content } from 'pdfmake/interfaces';
+// @ts-ignore
+import htmlToPdfmake from 'html-to-pdfmake';
+import { JSDOM } from 'jsdom';
+
+const { window: jsdomWindow } = new JSDOM('');
 
 // __dirname 기준으로 폰트 경로 탐색 (개발/프로덕션 모두 대응)
 const getFontsDir = () => {
@@ -49,24 +54,20 @@ interface PdfOptions {
 export async function generateContractPDF(options: PdfOptions): Promise<Buffer> {
   const { content, tenantSignature, adminSignature, tenantName, tenantSignedAt, adminSignedAt, contractDetails } = options;
 
-  // 계약 내용을 줄 단위로 분리하여 pdfmake content로 변환
-  const contentLines: Content[] = content.split('\n').map(line => {
-    const trimmed = line.trim();
-    if (!trimmed) return { text: ' ', fontSize: 10, margin: [0, 2, 0, 2] as [number, number, number, number] };
-
-    // 제목 (# 으로 시작)
-    if (trimmed.startsWith('# ')) {
-      return { text: trimmed.replace('# ', ''), fontSize: 18, bold: true, alignment: 'center' as const, margin: [0, 10, 0, 10] as [number, number, number, number] };
-    }
-    if (trimmed.startsWith('## ')) {
-      return { text: trimmed.replace('## ', ''), fontSize: 14, bold: true, margin: [0, 8, 0, 6] as [number, number, number, number] };
-    }
-    if (trimmed.startsWith('### ')) {
-      return { text: trimmed.replace('### ', ''), fontSize: 12, bold: true, margin: [0, 6, 0, 4] as [number, number, number, number] };
-    }
-
-    return { text: trimmed, fontSize: 10, lineHeight: 1.6, margin: [0, 1, 0, 1] as [number, number, number, number] };
+  // HTML 계약 내용을 pdfmake content로 변환
+  const htmlContent = htmlToPdfmake(content, {
+    window: jsdomWindow,
+    defaultStyles: {
+      h1: { fontSize: 18, bold: true, alignment: 'center', margin: [0, 10, 0, 10] },
+      h2: { fontSize: 14, bold: true, margin: [0, 8, 0, 6] },
+      h3: { fontSize: 12, bold: true, margin: [0, 6, 0, 4] },
+      p: { fontSize: 10, lineHeight: 1.6, margin: [0, 2, 0, 2] },
+      li: { fontSize: 10, margin: [0, 1, 0, 1] },
+      table: { fontSize: 10 },
+      th: { bold: true, fillColor: '#f8fafc' },
+    },
   });
+  const contentLines: Content[] = Array.isArray(htmlContent) ? htmlContent : [htmlContent];
 
   // 서명 영역
   const signatureSection: Content[] = [

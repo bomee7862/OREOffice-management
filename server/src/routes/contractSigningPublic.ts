@@ -43,6 +43,8 @@ router.get('/:token', async (req, res) => {
       monthly_rent_vat: data.monthly_rent_vat || 0,
       deposit: data.deposit || 0,
       management_fee: data.management_fee || 0,
+      phone: data.phone || '',
+      address: data.address || '',
     });
   } catch (error) {
     console.error('계약 조회 실패:', error);
@@ -53,14 +55,14 @@ router.get('/:token', async (req, res) => {
 // 입주자 서명 제출 (공개)
 router.post('/:token/sign', async (req, res) => {
   try {
-    const { signature_data } = req.body;
+    const { signature_data, company_name, representative_name, business_number, phone, address } = req.body;
     if (!signature_data) {
       return res.status(400).json({ error: '서명 데이터가 필요합니다.' });
     }
 
     // 세션 확인
     const check = await query(`
-      SELECT id, status, tenant_signed_at, expires_at
+      SELECT id, status, tenant_signed_at, expires_at, contract_data, rendered_content
       FROM contract_signing_sessions
       WHERE tenant_token = $1
     `, [req.params.token]);
@@ -86,15 +88,36 @@ router.post('/:token/sign', async (req, res) => {
       return res.status(400).json({ error: '서명할 수 없는 상태입니다.' });
     }
 
+    // 입주자 입력 정보 처리
+    let contractData = { ...(session.contract_data || {}) };
+    let renderedContent = session.rendered_content || '';
+
+    const tenantFields: Record<string, { placeholder: string; value?: string }> = {
+      company_name: { placeholder: '[회사명 입주자 기입]', value: company_name },
+      representative_name: { placeholder: '[대표자명 입주자 기입]', value: representative_name },
+      business_number: { placeholder: '[사업자번호 입주자 기입]', value: business_number },
+      phone: { placeholder: '[전화번호 입주자 기입]', value: phone },
+      address: { placeholder: '[주소 입주자 기입]', value: address },
+    };
+
+    for (const [key, { placeholder, value }] of Object.entries(tenantFields)) {
+      if (value) {
+        contractData[key] = value;
+        renderedContent = renderedContent.replaceAll(placeholder, value);
+      }
+    }
+
     // 서명 저장
     await query(`
       UPDATE contract_signing_sessions
       SET tenant_signature_data = $1,
           tenant_signed_at = CURRENT_TIMESTAMP,
           status = 'tenant_signed',
+          contract_data = $2,
+          rendered_content = $3,
           updated_at = CURRENT_TIMESTAMP
-      WHERE id = $2
-    `, [signature_data, session.id]);
+      WHERE id = $4
+    `, [signature_data, JSON.stringify(contractData), renderedContent, session.id]);
 
     res.json({ message: '서명이 완료되었습니다.' });
   } catch (error) {

@@ -14,6 +14,8 @@ interface ContractData {
   end_date: string;
   status: string;
   tenant_signed_at: string | null;
+  phone?: string;
+  address?: string;
 }
 
 export default function SigningPage() {
@@ -23,6 +25,24 @@ export default function SigningPage() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [tenantInfo, setTenantInfo] = useState({
+    company_name: '',
+    representative_name: '',
+    business_number: '',
+    phone: '',
+    address: '',
+  });
+
+  const updateTenantInfo = (field: string, value: string) =>
+    setTenantInfo(prev => ({ ...prev, [field]: value }));
+
+  const rc = contract?.rendered_content || '';
+  const needsCompanyName = rc.includes('[회사명 입주자 기입]');
+  const needsRepresentative = rc.includes('[대표자명 입주자 기입]');
+  const needsBusinessNumber = rc.includes('[사업자번호 입주자 기입]');
+  const needsPhone = rc.includes('[전화번호 입주자 기입]');
+  const needsAddress = rc.includes('[주소 입주자 기입]');
+  const needsTenantInfo = needsCompanyName || needsRepresentative || needsBusinessNumber || needsPhone || needsAddress;
 
   useEffect(() => {
     if (!token) return;
@@ -61,9 +81,33 @@ export default function SigningPage() {
   const handleSign = async (signatureData: string) => {
     if (!token || !agreed) return;
 
+    if (needsCompanyName && !tenantInfo.company_name.trim()) {
+      setError('회사명(성명)을 입력해 주세요.');
+      return;
+    }
+    if (needsRepresentative && !tenantInfo.representative_name.trim()) {
+      setError('대표자명을 입력해 주세요.');
+      return;
+    }
+    if (needsPhone && !tenantInfo.phone.trim()) {
+      setError('전화번호를 입력해 주세요.');
+      return;
+    }
+    if (needsAddress && !tenantInfo.address.trim()) {
+      setError('주소를 입력해 주세요.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      await publicSigningApi.submitSignature(token, { signature_data: signatureData });
+      const payload: any = { signature_data: signatureData };
+      if (tenantInfo.company_name) payload.company_name = tenantInfo.company_name;
+      if (tenantInfo.representative_name) payload.representative_name = tenantInfo.representative_name;
+      if (tenantInfo.business_number) payload.business_number = tenantInfo.business_number;
+      if (tenantInfo.phone) payload.phone = tenantInfo.phone;
+      if (tenantInfo.address) payload.address = tenantInfo.address;
+
+      await publicSigningApi.submitSignature(token, payload);
       setState('signed');
     } catch (err: any) {
       setError(err.response?.data?.error || '서명 제출에 실패했습니다.');
@@ -173,11 +217,92 @@ export default function SigningPage() {
                 <h2 className="font-bold text-slate-900">계약서 내용</h2>
               </div>
               <div className="p-6">
-                <div className="prose prose-sm max-w-none whitespace-pre-wrap text-slate-700 font-mono text-sm leading-relaxed">
-                  {contract.rendered_content}
-                </div>
+                <div
+                  className="contract-content text-slate-700 text-sm leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: contract.rendered_content }}
+                />
               </div>
             </div>
+
+            {/* 입주자 정보 입력 */}
+            {needsTenantInfo && (
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <h2 className="font-bold text-slate-900">입주자 정보 입력</h2>
+                <p className="text-sm text-slate-500">아래 정보를 입력해 주세요. 계약서에 반영됩니다.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {needsCompanyName && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        회사명 (또는 성명) <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={tenantInfo.company_name}
+                        onChange={e => updateTenantInfo('company_name', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="회사명 또는 성명"
+                      />
+                    </div>
+                  )}
+                  {needsRepresentative && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        대표자명 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={tenantInfo.representative_name}
+                        onChange={e => updateTenantInfo('representative_name', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="대표자명"
+                      />
+                    </div>
+                  )}
+                  {needsBusinessNumber && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        사업자등록번호
+                      </label>
+                      <input
+                        type="text"
+                        value={tenantInfo.business_number}
+                        onChange={e => updateTenantInfo('business_number', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="000-00-00000 (선택)"
+                      />
+                    </div>
+                  )}
+                  {needsPhone && (
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        전화번호 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="tel"
+                        value={tenantInfo.phone}
+                        onChange={e => updateTenantInfo('phone', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="010-0000-0000"
+                      />
+                    </div>
+                  )}
+                  {needsAddress && (
+                    <div className="sm:col-span-2">
+                      <label className="block text-sm font-medium text-slate-700 mb-1">
+                        주소 <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={tenantInfo.address}
+                        onChange={e => updateTenantInfo('address', e.target.value)}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                        placeholder="주소를 입력해 주세요"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* 동의 + 서명 */}
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">

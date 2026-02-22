@@ -86,12 +86,12 @@ export function getVariablesFromData(data: any): TemplateVariables {
   const today = new Date();
 
   return {
-    회사명: data.company_name || '',
-    대표자명: data.representative_name || '',
-    사업자번호: data.business_number || '',
+    회사명: data.company_name || '[회사명 입주자 기입]',
+    대표자명: data.representative_name || '[대표자명 입주자 기입]',
+    사업자번호: data.business_number || '[사업자번호 입주자 기입]',
     이메일: data.email || '',
-    전화번호: data.phone || '',
-    주소: data.address || '',
+    전화번호: data.phone || '[전화번호 입주자 기입]',
+    주소: data.address || '[주소 입주자 기입]',
     호실: data.room_number || '',
     호실유형: data.room_type || '',
     계약시작일: formatDate(data.start_date),

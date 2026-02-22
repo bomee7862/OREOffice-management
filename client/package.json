@@ -9,6 +9,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tiptap/extension-placeholder": "^3.20.0",
+    "@tiptap/extension-table": "^3.20.0",
+    "@tiptap/extension-table-cell": "^3.20.0",
+    "@tiptap/extension-table-header": "^3.20.0",
+    "@tiptap/extension-table-row": "^3.20.0",
+    "@tiptap/extension-text-align": "^3.20.0",
+    "@tiptap/extension-underline": "^3.20.0",
+    "@tiptap/pm": "^3.20.0",
+    "@tiptap/react": "^3.20.0",
+    "@tiptap/starter-kit": "^3.20.0",
     "axios": "^1.6.3",
     "date-fns": "^3.2.0",
     "lucide-react": "^0.303.0",

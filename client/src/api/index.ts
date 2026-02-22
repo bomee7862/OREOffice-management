@@ -197,8 +197,14 @@ export const contractSigningApi = {
 // 공개 서명 API (입주자, 인증 불필요)
 export const publicSigningApi = {
   getContract: (token: string) => api.get(`/public/signing/${token}`),
-  submitSignature: (token: string, data: { signature_data: string }) =>
-    api.post(`/public/signing/${token}/sign`, data),
+  submitSignature: (token: string, data: {
+    signature_data: string;
+    company_name?: string;
+    representative_name?: string;
+    business_number?: string;
+    phone?: string;
+    address?: string;
+  }) => api.post(`/public/signing/${token}/sign`, data),
 };
 
 export default api;

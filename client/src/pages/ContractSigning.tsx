@@ -4,6 +4,7 @@ import { ContractSigningSession, ContractTemplate } from '../types';
 import { Send, PenTool, Trash2, X, Mail, Eye } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
 import SignatureCanvas from '../components/SignatureCanvas';
+import TipTapEditor from '../components/TipTapEditor';
 
 const STATUS_BADGES: Record<string, { label: string; color: string }> = {
   pending_tenant: { label: '서명 대기', color: 'bg-amber-50 text-amber-700' },
@@ -17,13 +18,8 @@ const ROOM_TYPES = ['1인실', '2인실', '6인실', '회의실', '자유석', '
 
 const defaultInitForm = {
   template_id: 0,
-  admin_email: '',
-  // 입주사 정보
-  company_name: '',
-  representative_name: '',
-  business_number: '',
-  email: '',
-  phone: '',
+  email: '',       // 서명 요청 수신
+  admin_email: '',  // PDF 수신
   // 계약 정보
   room_number: '',
   room_type: '1인실',
@@ -83,11 +79,7 @@ export default function ContractSigning() {
   };
 
   const buildContractData = () => ({
-    company_name: initForm.company_name,
-    representative_name: initForm.representative_name,
-    business_number: initForm.business_number,
     email: initForm.email,
-    phone: initForm.phone,
     room_number: initForm.room_number,
     room_type: initForm.room_type,
     start_date: initForm.start_date,
@@ -101,7 +93,6 @@ export default function ContractSigning() {
 
   const validateForm = () => {
     if (!initForm.template_id || !initForm.email || !initForm.admin_email ||
-        !initForm.company_name || !initForm.representative_name ||
         !initForm.start_date || !initForm.end_date) {
       showError('필수 항목을 입력해주세요.');
       return false;
@@ -319,35 +310,20 @@ export default function ContractSigning() {
                     </select>
                   </div>
 
-                  {/* 입주사 정보 */}
+                  {/* 이메일 설정 */}
                   <div>
-                    <h3 className="text-sm font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-100">입주사 정보</h3>
+                    <h3 className="text-sm font-semibold text-slate-800 mb-3 pb-2 border-b border-slate-100">이메일</h3>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs text-slate-500 mb-1">회사명 *</label>
-                        <input type="text" value={initForm.company_name} onChange={e => updateForm('company_name', e.target.value)} className="input" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-500 mb-1">대표자명 *</label>
-                        <input type="text" value={initForm.representative_name} onChange={e => updateForm('representative_name', e.target.value)} className="input" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-500 mb-1">사업자번호</label>
-                        <input type="text" value={initForm.business_number} onChange={e => updateForm('business_number', e.target.value)} className="input" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-500 mb-1">이메일 (서명 요청 수신) *</label>
+                        <label className="block text-xs text-slate-500 mb-1">입주사 이메일 (서명 요청 수신) *</label>
                         <input type="email" value={initForm.email} onChange={e => updateForm('email', e.target.value)} className="input" />
-                      </div>
-                      <div>
-                        <label className="block text-xs text-slate-500 mb-1">전화번호</label>
-                        <input type="text" value={initForm.phone} onChange={e => updateForm('phone', e.target.value)} className="input" />
                       </div>
                       <div>
                         <label className="block text-xs text-slate-500 mb-1">관리자 이메일 (PDF 수신) *</label>
                         <input type="email" value={initForm.admin_email} onChange={e => updateForm('admin_email', e.target.value)} className="input" />
                       </div>
                     </div>
+                    <p className="text-xs text-slate-400 mt-2">입주사 정보(회사명, 대표자, 사업자번호, 전화번호, 주소)는 입주자가 서명 시 직접 입력합니다.</p>
                   </div>
 
                   {/* 계약 정보 */}
@@ -407,11 +383,11 @@ export default function ContractSigning() {
                 {/* Step 2: 미리보기 + 수정 */}
                 <div className="p-6 space-y-4 overflow-y-auto flex-1">
                   <p className="text-sm text-slate-500">계약서 내용을 확인하고 필요 시 직접 수정하세요.</p>
-                  <textarea
-                    value={previewContent}
-                    onChange={e => setPreviewContent(e.target.value)}
-                    className="w-full border border-slate-300 rounded-lg p-4 text-sm leading-relaxed focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent font-mono"
-                    style={{ minHeight: '400px' }}
+                  <TipTapEditor
+                    content={previewContent}
+                    onChange={(html) => setPreviewContent(html)}
+                    editable={true}
+                    minHeight="400px"
                   />
                 </div>
                 <div className="p-6 border-t border-slate-200 flex justify-between">
@@ -469,9 +445,10 @@ export default function ContractSigning() {
 
               <div>
                 <h3 className="text-sm font-semibold text-slate-700 mb-2">계약 내용</h3>
-                <div className="bg-slate-50 rounded-lg p-4 text-sm whitespace-pre-wrap max-h-60 overflow-y-auto">
-                  {selectedSession.rendered_content}
-                </div>
+                <div
+                  className="bg-slate-50 rounded-lg p-4 text-sm max-h-60 overflow-y-auto contract-content"
+                  dangerouslySetInnerHTML={{ __html: selectedSession.rendered_content }}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">

@@ -3,6 +3,7 @@ import { contractTemplatesApi } from '../api';
 import { ContractTemplate } from '../types';
 import { Plus, Edit2, Trash2, X, Copy } from 'lucide-react';
 import { showSuccess, showError } from '../utils/toast';
+import TipTapEditor, { TipTapEditorRef } from '../components/TipTapEditor';
 
 const AVAILABLE_VARIABLES = [
   { key: '회사명', label: '입주사명' },
@@ -10,6 +11,7 @@ const AVAILABLE_VARIABLES = [
   { key: '사업자번호', label: '사업자등록번호' },
   { key: '이메일', label: '이메일' },
   { key: '전화번호', label: '전화번호' },
+  { key: '주소', label: '주소' },
   { key: '호실', label: '호실 번호' },
   { key: '호실유형', label: '호실 유형' },
   { key: '계약시작일', label: '계약 시작일' },
@@ -28,7 +30,7 @@ export default function ContractTemplates() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [form, setForm] = useState({ template_name: '', template_content: '' });
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const editorRef = useRef<TipTapEditorRef>(null);
 
   useEffect(() => { loadTemplates(); }, []);
 
@@ -55,8 +57,14 @@ export default function ContractTemplates() {
     setShowModal(true);
   };
 
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   const handleSave = async () => {
-    if (!form.template_name.trim() || !form.template_content.trim()) {
+    if (!form.template_name.trim() || !stripHtml(form.template_content).trim()) {
       showError('이름과 내용을 입력해주세요.');
       return;
     }
@@ -87,20 +95,7 @@ export default function ContractTemplates() {
   };
 
   const insertVariable = (key: string) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = form.template_content;
-    const variable = `{{${key}}}`;
-    const newContent = text.substring(0, start) + variable + text.substring(end);
-    setForm(prev => ({ ...prev, template_content: newContent }));
-    // 삽입 후 커서를 변수 뒤로 이동
-    requestAnimationFrame(() => {
-      textarea.focus();
-      const newPos = start + variable.length;
-      textarea.setSelectionRange(newPos, newPos);
-    });
+    editorRef.current?.insertContent(`{{${key}}}`);
   };
 
   if (loading) {
@@ -136,7 +131,7 @@ export default function ContractTemplates() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-slate-900">{t.template_name}</h3>
                 <p className="text-sm text-slate-500 mt-1 truncate">
-                  {t.template_content.substring(0, 100)}...
+                  {stripHtml(t.template_content).substring(0, 100)}...
                 </p>
                 <p className="text-xs text-slate-400 mt-1">
                   {new Date(t.created_at).toLocaleDateString('ko-KR')}
@@ -199,12 +194,12 @@ export default function ContractTemplates() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">계약서 내용</label>
-                <textarea
-                  ref={textareaRef}
-                  value={form.template_content}
-                  onChange={e => setForm(prev => ({ ...prev, template_content: e.target.value }))}
-                  className="input min-h-[400px] font-mono text-sm"
-                  placeholder={`# 임대차 계약서\n\n## 제1조 (목적물)\n{{회사명}} (이하 "을"이라 한다)은 {{호실}}호를 임차한다.\n\n## 제2조 (계약기간)\n{{계약시작일}} ~ {{계약종료일}}\n\n## 제3조 (임대료)\n월 사용료: {{월사용료}}원 (VAT 포함 {{월사용료VAT}}원)\n보증금: {{보증금}}원\n관리비: {{관리비}}원`}
+                <TipTapEditor
+                  ref={editorRef}
+                  content={form.template_content}
+                  onChange={(html) => setForm(prev => ({ ...prev, template_content: html }))}
+                  placeholder="계약서 내용을 입력하세요..."
+                  minHeight="400px"
                 />
               </div>
             </div>

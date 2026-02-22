@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { contractTemplatesApi } from '../api';
 import { ContractTemplate } from '../types';
 import { Plus, Edit2, Trash2, X, Copy } from 'lucide-react';
@@ -28,6 +28,7 @@ export default function ContractTemplates() {
   const [showModal, setShowModal] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<ContractTemplate | null>(null);
   const [form, setForm] = useState({ template_name: '', template_content: '' });
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => { loadTemplates(); }, []);
 
@@ -86,10 +87,20 @@ export default function ContractTemplates() {
   };
 
   const insertVariable = (key: string) => {
-    setForm(prev => ({
-      ...prev,
-      template_content: prev.template_content + `{{${key}}}`,
-    }));
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = form.template_content;
+    const variable = `{{${key}}}`;
+    const newContent = text.substring(0, start) + variable + text.substring(end);
+    setForm(prev => ({ ...prev, template_content: newContent }));
+    // 삽입 후 커서를 변수 뒤로 이동
+    requestAnimationFrame(() => {
+      textarea.focus();
+      const newPos = start + variable.length;
+      textarea.setSelectionRange(newPos, newPos);
+    });
   };
 
   if (loading) {
@@ -189,6 +200,7 @@ export default function ContractTemplates() {
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">계약서 내용</label>
                 <textarea
+                  ref={textareaRef}
                   value={form.template_content}
                   onChange={e => setForm(prev => ({ ...prev, template_content: e.target.value }))}
                   className="input min-h-[400px] font-mono text-sm"

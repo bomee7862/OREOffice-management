@@ -1,20 +1,24 @@
 import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
+// Resend (프로덕션 - HTTP API, SMTP 차단 환경)
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+
+// Gmail SMTP (로컬 개발)
 const GMAIL_USER = process.env.GMAIL_USER || '';
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || '';
-const FROM_EMAIL = GMAIL_USER;
-
-const transporter = (GMAIL_USER && GMAIL_APP_PASSWORD)
+const gmailTransporter = (GMAIL_USER && GMAIL_APP_PASSWORD && !resend)
   ? nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
       secure: true,
-      auth: {
-        user: GMAIL_USER,
-        pass: GMAIL_APP_PASSWORD,
-      },
+      auth: { user: GMAIL_USER, pass: GMAIL_APP_PASSWORD },
     })
   : null;
+
+const FROM_NAME = '오레오피스';
+const RESEND_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
 
 interface ContractDetails {
   companyName: string;
@@ -25,25 +29,67 @@ interface ContractDetails {
   deposit: string;
 }
 
+async function sendEmail(to: string, subject: string, html: string, attachments?: { filename: string; content: Buffer }[]) {
+  // 1순위: Resend (프로덕션)
+  if (resend) {
+    const opts: any = {
+      from: `${FROM_NAME} <${RESEND_FROM}>`,
+      to,
+      subject,
+      html,
+    };
+    if (attachments?.length) {
+      opts.attachments = attachments.map(a => ({
+        filename: a.filename,
+        content: a.content,
+      }));
+    }
+    const { data, error } = await resend.emails.send(opts);
+    if (error) throw new Error(`Resend 발송 실패: ${error.message}`);
+    console.log('Resend 메일 발송 완료:', data?.id);
+    return { messageId: data?.id };
+  }
+
+  // 2순위: Gmail SMTP (로컬)
+  if (gmailTransporter) {
+    const opts: any = {
+      from: `${FROM_NAME} <${GMAIL_USER}>`,
+      to,
+      subject,
+      html,
+    };
+    if (attachments?.length) {
+      opts.attachments = attachments;
+    }
+    const result = await gmailTransporter.sendMail(opts);
+    console.log('Gmail 메일 발송 완료:', result.messageId);
+    return result;
+  }
+
+  // 테스트 모드
+  console.log('=== [테스트] 메일 발송 스킵 ===');
+  console.log('수신자:', to);
+  console.log('제목:', subject);
+  return { messageId: 'test-' + Date.now() };
+}
+
 // 입주자에게 서명 요청 메일 발송
 export async function sendSigningEmail(
   to: string,
   signingLink: string,
   details: ContractDetails
 ) {
-  if (!transporter) {
-    console.log('=== [로컬 테스트] 메일 발송 스킵 (GMAIL 미설정) ===');
+  if (!resend && !gmailTransporter) {
+    console.log('=== [테스트] 메일 발송 스킵 ===');
     console.log('수신자:', to);
     console.log('서명 링크:', signingLink);
-    console.log('계약 정보:', details);
-    return { messageId: 'local-test-' + Date.now() };
+    return { messageId: 'test-' + Date.now() };
   }
 
-  const result = await transporter.sendMail({
-    from: `오레오피스 <${FROM_EMAIL}>`,
+  return sendEmail(
     to,
-    subject: `[계약서] ${details.roomNumber}호 임대차 계약서 서명 요청`,
-    html: `
+    `[계약서] ${details.roomNumber}호 임대차 계약서 서명 요청`,
+    `
       <div style="font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: #f8fafc; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
           <h2 style="color: #1e293b; margin: 0 0 8px;">계약서 전자 서명 요청</h2>
@@ -74,11 +120,8 @@ export async function sendSigningEmail(
           </p>
         </div>
       </div>
-    `,
-  });
-
-  console.log('서명 요청 메일 발송 완료:', result.messageId);
-  return result;
+    `
+  );
 }
 
 // 양측에 최종 PDF 발송
@@ -88,58 +131,39 @@ export async function sendFinalPDF(
   pdfBuffer: Buffer,
   details: ContractDetails
 ) {
-  const emailContent = {
-    subject: `[계약서] ${details.roomNumber}호 임대차 계약서 (서명 완료)`,
-    html: `
-      <div style="font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <div style="background: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-          <h2 style="color: #166534; margin: 0 0 8px;">계약서 서명 완료</h2>
-          <p style="color: #15803d; margin: 0;">양측 서명이 포함된 최종 계약서를 보내드립니다.</p>
-        </div>
-
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">입주사</td><td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${details.companyName}</td></tr>
-            <tr><td style="padding: 8px 0; color: #64748b;">호실</td><td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${details.roomNumber}호</td></tr>
-            <tr><td style="padding: 8px 0; color: #64748b;">계약 기간</td><td style="padding: 8px 0; color: #1e293b;">${details.startDate} ~ ${details.endDate}</td></tr>
-          </table>
-        </div>
-
-        <p style="color: #64748b; font-size: 14px;">첨부된 PDF 파일을 안전하게 보관해 주시기 바랍니다.</p>
-      </div>
-    `,
-    attachments: [
-      {
-        filename: `계약서_${details.roomNumber}호_${details.companyName}.pdf`,
-        content: pdfBuffer,
-      },
-    ],
-  };
-
-  if (!transporter) {
-    console.log('=== [로컬 테스트] PDF 메일 발송 스킵 (GMAIL 미설정) ===');
-    console.log('입주자:', toTenant);
-    console.log('관리자:', toAdmin);
+  if (!resend && !gmailTransporter) {
+    console.log('=== [테스트] PDF 메일 발송 스킵 ===');
+    console.log('입주자:', toTenant, '관리자:', toAdmin);
     console.log('PDF 크기:', pdfBuffer.length, 'bytes');
-    console.log('계약 정보:', details);
-    return { tenantResult: { messageId: 'local-test-tenant' }, adminResult: { messageId: 'local-test-admin' } };
+    return { tenantResult: { messageId: 'test-tenant' }, adminResult: { messageId: 'test-admin' } };
   }
 
-  // 입주자에게 발송
-  const tenantResult = await transporter.sendMail({
-    from: `오레오피스 <${FROM_EMAIL}>`,
-    to: toTenant,
-    ...emailContent,
-  });
-  console.log('입주자 PDF 발송 완료:', tenantResult.messageId);
+  const subject = `[계약서] ${details.roomNumber}호 임대차 계약서 (서명 완료)`;
+  const html = `
+    <div style="font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: #f0fdf4; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+        <h2 style="color: #166534; margin: 0 0 8px;">계약서 서명 완료</h2>
+        <p style="color: #15803d; margin: 0;">양측 서명이 포함된 최종 계약서를 보내드립니다.</p>
+      </div>
 
-  // 관리자에게 발송
-  const adminResult = await transporter.sendMail({
-    from: `오레오피스 <${FROM_EMAIL}>`,
-    to: toAdmin,
-    ...emailContent,
-  });
-  console.log('관리자 PDF 발송 완료:', adminResult.messageId);
+      <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; margin-bottom: 24px;">
+        <table style="width: 100%; border-collapse: collapse;">
+          <tr><td style="padding: 8px 0; color: #64748b; width: 100px;">입주사</td><td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${details.companyName}</td></tr>
+          <tr><td style="padding: 8px 0; color: #64748b;">호실</td><td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${details.roomNumber}호</td></tr>
+          <tr><td style="padding: 8px 0; color: #64748b;">계약 기간</td><td style="padding: 8px 0; color: #1e293b;">${details.startDate} ~ ${details.endDate}</td></tr>
+        </table>
+      </div>
+
+      <p style="color: #64748b; font-size: 14px;">첨부된 PDF 파일을 안전하게 보관해 주시기 바랍니다.</p>
+    </div>
+  `;
+  const attachments = [{
+    filename: `계약서_${details.roomNumber}호_${details.companyName}.pdf`,
+    content: pdfBuffer,
+  }];
+
+  const tenantResult = await sendEmail(toTenant, subject, html, attachments);
+  const adminResult = await sendEmail(toAdmin, subject, html, attachments);
 
   return { tenantResult, adminResult };
 }

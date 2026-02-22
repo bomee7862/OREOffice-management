@@ -518,6 +518,67 @@ const createTables = async () => {
       );
     `);
 
+    // 계약서 템플릿 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS contract_templates (
+        id SERIAL PRIMARY KEY,
+        template_name VARCHAR(100) NOT NULL,
+        template_content TEXT NOT NULL,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 계약서 서명 세션 테이블
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS contract_signing_sessions (
+        id SERIAL PRIMARY KEY,
+        contract_id INTEGER REFERENCES contracts(id) ON DELETE SET NULL,
+        template_id INTEGER REFERENCES contract_templates(id) ON DELETE SET NULL,
+        tenant_token VARCHAR(255) NOT NULL UNIQUE,
+        tenant_email VARCHAR(100) NOT NULL,
+        admin_email VARCHAR(100),
+        rendered_content TEXT NOT NULL,
+        tenant_signature_data TEXT,
+        tenant_signed_at TIMESTAMP,
+        admin_signature_data TEXT,
+        admin_signed_at TIMESTAMP,
+        status VARCHAR(20) DEFAULT 'pending_tenant',
+        final_pdf_sent_at TIMESTAMP,
+        expires_at TIMESTAMP NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // contract_signing_sessions에 새 컬럼 추가
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE contract_signing_sessions ADD COLUMN contract_data JSONB;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
+    // contract_signing_sessions.contract_id nullable로 변경 (기존 DB 호환)
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE contract_signing_sessions ALTER COLUMN contract_id DROP NOT NULL;
+      EXCEPTION
+        WHEN others THEN null;
+      END $$;
+    `);
+
+    // contract_signing_sessions에 admin_email 컬럼 추가
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE contract_signing_sessions ADD COLUMN admin_email VARCHAR(100);
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
     // 인덱스 생성
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_contracts_room_id ON contracts(room_id);
@@ -533,6 +594,9 @@ const createTables = async () => {
       CREATE INDEX IF NOT EXISTS idx_billings_tenant ON monthly_billings(tenant_id);
       CREATE INDEX IF NOT EXISTS idx_billings_status ON monthly_billings(status);
       CREATE INDEX IF NOT EXISTS idx_users_username ON users(username);
+      CREATE INDEX IF NOT EXISTS idx_signing_sessions_token ON contract_signing_sessions(tenant_token);
+      CREATE INDEX IF NOT EXISTS idx_signing_sessions_status ON contract_signing_sessions(status);
+      CREATE INDEX IF NOT EXISTS idx_signing_sessions_contract ON contract_signing_sessions(contract_id);
     `);
 
     await client.query('COMMIT');

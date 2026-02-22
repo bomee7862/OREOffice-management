@@ -227,6 +227,43 @@ export interface User {
   updated_at?: string;
 }
 
+export type SigningStatus = 'pending_tenant' | 'tenant_signed' | 'pending_admin' | 'completed' | 'sent';
+
+export interface ContractTemplate {
+  id: number;
+  template_name: string;
+  template_content: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContractSigningSession {
+  id: number;
+  contract_id: number;
+  template_id: number | null;
+  tenant_token: string;
+  tenant_email: string;
+  rendered_content: string;
+  tenant_signature_data: string | null;
+  tenant_signed_at: string | null;
+  admin_signature_data: string | null;
+  admin_signed_at: string | null;
+  status: SigningStatus;
+  final_pdf_sent_at: string | null;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  // Joined
+  company_name?: string;
+  representative_name?: string;
+  room_number?: string;
+  start_date?: string;
+  end_date?: string;
+  monthly_rent?: number;
+  deposit?: number;
+}
+
 export interface DashboardSummary {
   room_stats: { status: RoomStatus; count: string }[];
   postbox_stats: { status: RoomStatus; count: string }[];

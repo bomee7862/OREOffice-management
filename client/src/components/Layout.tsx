@@ -11,7 +11,9 @@ import {
   ClipboardList,
   TrendingUp,
   Users,
-  LogOut
+  LogOut,
+  FileSignature,
+  PenTool
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -30,6 +32,9 @@ const navItems = [
   { type: 'divider' as const, label: '분석' },
   { path: '/settlements', icon: ClipboardList, label: '월별 정산' },
   { path: '/report', icon: TrendingUp, label: '손익 분석' },
+  { type: 'divider' as const, label: '계약 서명', adminOnly: true },
+  { path: '/contract-templates', icon: FileSignature, label: '계약서 템플릿', adminOnly: true },
+  { path: '/contract-signing', icon: PenTool, label: '전자 서명', adminOnly: true },
   { type: 'divider' as const, label: '관리', adminOnly: true },
   { path: '/users', icon: Users, label: '사용자 관리', adminOnly: true },
 ];

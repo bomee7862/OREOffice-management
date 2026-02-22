@@ -13,6 +13,9 @@ import TransactionSearch from './pages/TransactionSearch'
 import Report from './pages/Report'
 import Settlements from './pages/Settlements'
 import Users from './pages/Users'
+import ContractTemplates from './pages/ContractTemplates'
+import ContractSigning from './pages/ContractSigning'
+import SigningPage from './pages/SigningPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -50,6 +53,7 @@ function App() {
       <Route path="/login" element={
         user ? <Navigate to="/" replace /> : <Login />
       } />
+      <Route path="/sign/:token" element={<SigningPage />} />
       <Route path="/*" element={
         <ProtectedRoute>
           <Layout>
@@ -63,6 +67,12 @@ function App() {
               <Route path="/search" element={<TransactionSearch />} />
               <Route path="/report" element={<Report />} />
               <Route path="/settlements" element={<Settlements />} />
+              <Route path="/contract-templates" element={
+                <AdminRoute><ContractTemplates /></AdminRoute>
+              } />
+              <Route path="/contract-signing" element={
+                <AdminRoute><ContractSigning /></AdminRoute>
+              } />
               <Route path="/users" element={
                 <AdminRoute><Users /></AdminRoute>
               } />

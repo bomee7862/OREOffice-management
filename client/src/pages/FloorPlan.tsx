@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef, MouseEvent } from 'react';
-import { roomsApi, tenantsApi, contractsApi, billingsApi } from '../api';
+import { roomsApi, tenantsApi, contractsApi, billingsApi, contractSigningApi } from '../api';
 import { Room, Tenant, Contract, Billing } from '../types';
 import { X, Building2, User, Phone, Calendar, CreditCard, Mailbox, Move, Copy, Trash2, Plus, CheckCircle2, Clock, Gift, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -53,6 +53,9 @@ export default function FloorPlan() {
   const [dragState, setDragState] = useState<DragState | null>(null);
   const [resizeState, setResizeState] = useState<ResizeState | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+
+  const [signableSessions, setSignableSessions] = useState<any[]>([]);
+  const [selectedSigningSessionId, setSelectedSigningSessionId] = useState<number | null>(null);
 
   const [contractForm, setContractForm] = useState({
     tenant_id: '',
@@ -249,9 +252,41 @@ export default function FloorPlan() {
     setSelectedRoom(null);
   };
 
-  const openContractModal = () => {
+  const openContractModal = async () => {
     setIsEditMode(false);
+    setSelectedSigningSessionId(null);
+    try {
+      const res = await contractSigningApi.getSignableSessions();
+      setSignableSessions(res.data);
+    } catch { /* ignore */ }
     setShowContractModal(true);
+  };
+
+  const handleLoadSigningSession = (sessionId: number) => {
+    if (!sessionId) {
+      setSelectedSigningSessionId(null);
+      return;
+    }
+    const session = signableSessions.find((s: any) => s.id === sessionId);
+    if (!session?.contract_data) return;
+    const d = session.contract_data;
+    setSelectedSigningSessionId(sessionId);
+    setContractForm(prev => ({
+      ...prev,
+      new_tenant: true,
+      company_name: d.company_name || '',
+      representative_name: d.representative_name || '',
+      business_number: d.business_number || '',
+      email: d.email || '',
+      phone: d.phone || '',
+      start_date: d.start_date || prev.start_date,
+      end_date: d.end_date || '',
+      monthly_rent_vat: d.monthly_rent_vat?.toString() || '',
+      monthly_rent: d.monthly_rent?.toString() || '',
+      deposit: d.deposit?.toString() || '',
+      management_fee: d.management_fee?.toString() || '',
+      payment_day: d.payment_day?.toString() || '10',
+    }));
   };
 
   const openEditModal = () => {
@@ -283,6 +318,7 @@ export default function FloorPlan() {
   const closeContractModal = () => {
     setShowContractModal(false);
     setIsEditMode(false);
+    setSelectedSigningSessionId(null);
     setContractForm({
       tenant_id: '',
       start_date: format(new Date(), 'yyyy-MM-dd'),
@@ -427,7 +463,7 @@ export default function FloorPlan() {
         tenantId = tenantRes.data.id;
       }
 
-      await contractsApi.create({
+      const contractRes = await contractsApi.create({
         room_id: selectedRoom.id,
         tenant_id: parseInt(tenantId),
         start_date: contractForm.start_date,
@@ -440,6 +476,13 @@ export default function FloorPlan() {
         management_fee: parseInt(contractForm.management_fee) || 0,
         payment_day: parseInt(contractForm.payment_day) || 10
       });
+
+      // 서명 세션과 계약 연결
+      if (selectedSigningSessionId && contractRes.data?.id) {
+        try {
+          await contractSigningApi.linkContract(selectedSigningSessionId, contractRes.data.id);
+        } catch { /* 연결 실패해도 계약 생성은 성공 */ }
+      }
 
       await loadData();
       closeContractModal();
@@ -1194,6 +1237,26 @@ export default function FloorPlan() {
             </div>
 
             <div className="p-6 space-y-6">
+              {/* 서명 완료 계약 불러오기 */}
+              {!isEditMode && signableSessions.length > 0 && (
+                <div className="p-4 bg-indigo-50 border border-indigo-200 rounded-xl">
+                  <label className="label text-indigo-700">서명 완료 계약 불러오기</label>
+                  <select
+                    value={selectedSigningSessionId || ''}
+                    onChange={(e) => handleLoadSigningSession(Number(e.target.value))}
+                    className="input"
+                  >
+                    <option value="">직접 입력</option>
+                    {signableSessions.map((s: any) => (
+                      <option key={s.id} value={s.id}>
+                        {s.contract_data?.company_name || '(회사명 없음)'} - {s.contract_data?.room_number || ''} ({s.status === 'completed' ? '서명완료' : 'PDF발송'})
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-indigo-500 mt-1">전자 서명이 완료된 계약 정보를 자동으로 채웁니다.</p>
+                </div>
+              )}
+
               {/* 수정 모드가 아닐 때만 입주사 선택 표시 */}
               {!isEditMode && (
               <div>

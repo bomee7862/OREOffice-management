@@ -11,6 +11,9 @@ import settlementRoutes from './routes/settlements';
 import dashboardRoutes from './routes/dashboard';
 import uploadRoutes from './routes/uploads';
 import authRoutes from './routes/auth';
+import contractTemplateRoutes from './routes/contractTemplates';
+import contractSigningRoutes from './routes/contractSigning';
+import contractSigningPublicRoutes from './routes/contractSigningPublic';
 import { authenticate, AuthRequest } from './middleware/auth';
 
 dotenv.config();
@@ -30,7 +33,7 @@ const corsOptions = process.env.CORS_ORIGIN
   ? { origin: process.env.CORS_ORIGIN.split(','), credentials: true }
   : undefined;
 app.use(cors(corsOptions));
-app.use(express.json());
+app.use(express.json({ limit: '5mb' }));
 
 // 정적 파일 서빙 (업로드된 파일)
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
@@ -42,6 +45,9 @@ app.get('/api/health', (req, res) => {
 
 // 인증 라우트 (로그인은 공개)
 app.use('/api/auth', authRoutes);
+
+// 공개 라우트 (입주자 서명 - 인증 불필요)
+app.use('/api/public/signing', contractSigningPublicRoutes);
 
 // viewer 쓰기 차단 미들웨어
 const viewerWriteBlock = (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -60,6 +66,8 @@ app.use('/api/billings', authenticate, viewerWriteBlock, billingRoutes);
 app.use('/api/settlements', authenticate, viewerWriteBlock, settlementRoutes);
 app.use('/api/dashboard', authenticate, viewerWriteBlock, dashboardRoutes);
 app.use('/api/uploads', authenticate, viewerWriteBlock, uploadRoutes);
+app.use('/api/contract-templates', authenticate, viewerWriteBlock, contractTemplateRoutes);
+app.use('/api/contract-signing', authenticate, viewerWriteBlock, contractSigningRoutes);
 
 // 프로덕션: 클라이언트 정적 파일 서빙
 const clientDistPath = path.join(__dirname, '../../client/dist');

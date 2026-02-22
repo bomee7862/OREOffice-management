@@ -165,5 +165,41 @@ export const authApi = {
   deleteUser: (id: number) => api.delete(`/auth/users/${id}`),
 };
 
+// 계약서 템플릿 API
+export const contractTemplatesApi = {
+  getAll: () => api.get('/contract-templates'),
+  getById: (id: number) => api.get(`/contract-templates/${id}`),
+  getVariables: () => api.get('/contract-templates/variables'),
+  create: (data: { template_name: string; template_content: string }) =>
+    api.post('/contract-templates', data),
+  update: (id: number, data: any) => api.put(`/contract-templates/${id}`, data),
+  delete: (id: number) => api.delete(`/contract-templates/${id}`),
+};
+
+// 전자 서명 API (관리자)
+export const contractSigningApi = {
+  getSessions: (params?: { status?: string }) =>
+    api.get('/contract-signing/sessions', { params }),
+  getSession: (id: number) => api.get(`/contract-signing/session/${id}`),
+  preview: (data: { template_id: number; contract_data: any }) =>
+    api.post('/contract-signing/preview', data),
+  initiate: (data: { template_id: number; tenant_email: string; admin_email: string; contract_data: any; rendered_content?: string }) =>
+    api.post('/contract-signing/initiate', data),
+  getSignableSessions: () => api.get('/contract-signing/signable-sessions'),
+  linkContract: (sessionId: number, contractId: number) =>
+    api.patch(`/contract-signing/session/${sessionId}/link-contract`, { contract_id: contractId }),
+  adminSign: (id: number, data: { signature_data: string }) =>
+    api.post(`/contract-signing/admin-sign/${id}`, data),
+  sendPDF: (id: number) => api.post(`/contract-signing/send-pdf/${id}`),
+  deleteSession: (id: number) => api.delete(`/contract-signing/session/${id}`),
+};
+
+// 공개 서명 API (입주자, 인증 불필요)
+export const publicSigningApi = {
+  getContract: (token: string) => api.get(`/public/signing/${token}`),
+  submitSignature: (token: string, data: { signature_data: string }) =>
+    api.post(`/public/signing/${token}/sign`, data),
+};
+
 export default api;
 

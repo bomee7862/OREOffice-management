@@ -44,6 +44,7 @@ export default function ContractSigning() {
   const [sending, setSending] = useState(false);
   const [previewStep, setPreviewStep] = useState(false);
   const [previewContent, setPreviewContent] = useState('');
+  const [adminSignStep, setAdminSignStep] = useState<'preview' | 'sign'>('preview');
 
   useEffect(() => { loadSessions(); }, []);
 
@@ -251,7 +252,14 @@ export default function ContractSigning() {
                         </button>
                         {s.status === 'tenant_signed' && (
                           <button
-                            onClick={() => { setSelectedSession(s); setShowSignModal(true); }}
+                            onClick={async () => {
+                              try {
+                                const res = await contractSigningApi.getSession(s.id);
+                                setSelectedSession(res.data);
+                                setAdminSignStep('preview');
+                                setShowSignModal(true);
+                              } catch { showError('상세 조회에 실패했습니다.'); }
+                            }}
                             className="p-1.5 hover:bg-blue-50 rounded" title="관리자 서명"
                           >
                             <PenTool className="w-4 h-4 text-blue-600" />
@@ -405,24 +413,78 @@ export default function ContractSigning() {
         </div>
       )}
 
-      {/* 관리자 서명 모달 */}
+      {/* 관리자 서명 모달 (미리보기 → 서명 2단계) */}
       {showSignModal && selectedSession && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between p-6 border-b border-slate-200">
-              <h2 className="text-lg font-bold text-slate-900">관리자 서명</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-lg font-bold text-slate-900">관리자 서명</h2>
+                <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                  adminSignStep === 'preview' ? 'bg-blue-50 text-blue-600' : 'bg-green-50 text-green-600'
+                }`}>
+                  {adminSignStep === 'preview' ? '내용 확인' : '서명'}
+                </span>
+              </div>
               <button onClick={() => setShowSignModal(false)}><X className="w-5 h-5 text-slate-400" /></button>
             </div>
-            <div className="p-6 space-y-4">
-              <div className="bg-slate-50 rounded-lg p-4 text-sm">
-                <p><span className="text-slate-500">입주사:</span> <span className="font-medium">{selectedSession.company_name}</span></p>
-                <p><span className="text-slate-500">호실:</span> <span className="font-medium">{selectedSession.room_number}호</span></p>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">서명</label>
-                <SignatureCanvas onSave={handleAdminSign} />
-              </div>
-            </div>
+
+            {adminSignStep === 'preview' ? (
+              <>
+                <div className="p-6 space-y-4 overflow-y-auto flex-1">
+                  <div className="grid grid-cols-2 gap-3 text-sm bg-slate-50 rounded-lg p-4">
+                    <p><span className="text-slate-500">입주사:</span> <span className="font-medium">{selectedSession.company_name}</span></p>
+                    <p><span className="text-slate-500">호실:</span> <span className="font-medium">{selectedSession.room_number}호</span></p>
+                    <p><span className="text-slate-500">이메일:</span> <span className="font-medium">{selectedSession.tenant_email}</span></p>
+                    <p><span className="text-slate-500">입주자 서명:</span> <span className="font-medium text-green-600">{selectedSession.tenant_signed_at ? formatDate(selectedSession.tenant_signed_at) : '-'}</span></p>
+                  </div>
+
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-700 mb-2">계약 내용</h3>
+                    <div
+                      className="bg-white border border-slate-200 rounded-lg p-4 text-sm max-h-[400px] overflow-y-auto contract-content"
+                      dangerouslySetInnerHTML={{ __html: selectedSession.rendered_content }}
+                    />
+                  </div>
+
+                  {selectedSession.tenant_signature_data && (
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-700 mb-2">입주자 서명</h3>
+                      <div className="border border-slate-200 rounded-lg p-3 bg-white inline-block">
+                        <img src={selectedSession.tenant_signature_data} alt="입주자 서명" className="max-h-16" />
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="p-6 border-t border-slate-200 flex justify-between">
+                  <button onClick={() => setShowSignModal(false)} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                    닫기
+                  </button>
+                  <button onClick={() => setAdminSignStep('sign')} className="btn-primary flex items-center gap-2">
+                    <PenTool className="w-4 h-4" />
+                    확인 후 서명하기
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="p-6 space-y-4">
+                  <div className="bg-slate-50 rounded-lg p-4 text-sm">
+                    <p><span className="text-slate-500">입주사:</span> <span className="font-medium">{selectedSession.company_name}</span></p>
+                    <p><span className="text-slate-500">호실:</span> <span className="font-medium">{selectedSession.room_number}호</span></p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">관리자 서명</label>
+                    <SignatureCanvas onSave={handleAdminSign} />
+                  </div>
+                </div>
+                <div className="p-6 border-t border-slate-200 flex justify-start">
+                  <button onClick={() => setAdminSignStep('preview')} className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg">
+                    돌아가기
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

@@ -11,6 +11,7 @@
     "db:seed": "tsx src/db/seed.ts"
   },
   "dependencies": {
+    "@sendgrid/mail": "^8.1.6",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
@@ -19,8 +20,7 @@
     "multer": "^2.0.2",
     "nodemailer": "^8.0.1",
     "pdfmake": "^0.3.4",
-    "pg": "^8.11.3",
-    "resend": "^6.9.2"
+    "pg": "^8.11.3"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

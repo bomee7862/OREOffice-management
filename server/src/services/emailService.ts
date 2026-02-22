@@ -1,14 +1,16 @@
+import sgMail from '@sendgrid/mail';
 import nodemailer from 'nodemailer';
-import { Resend } from 'resend';
 
-// Resend (프로덕션 - HTTP API, SMTP 차단 환경)
-const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+// SendGrid (프로덕션 - HTTP API)
+const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY || '';
+if (SENDGRID_API_KEY) {
+  sgMail.setApiKey(SENDGRID_API_KEY);
+}
 
 // Gmail SMTP (로컬 개발)
 const GMAIL_USER = process.env.GMAIL_USER || '';
 const GMAIL_APP_PASSWORD = process.env.GMAIL_APP_PASSWORD || '';
-const gmailTransporter = (GMAIL_USER && GMAIL_APP_PASSWORD && !resend)
+const gmailTransporter = (GMAIL_USER && GMAIL_APP_PASSWORD && !SENDGRID_API_KEY)
   ? nodemailer.createTransport({
       host: 'smtp.gmail.com',
       port: 465,
@@ -18,7 +20,7 @@ const gmailTransporter = (GMAIL_USER && GMAIL_APP_PASSWORD && !resend)
   : null;
 
 const FROM_NAME = '오레오피스';
-const RESEND_FROM = process.env.EMAIL_FROM || 'onboarding@resend.dev';
+const FROM_EMAIL = process.env.SENDGRID_FROM_EMAIL || GMAIL_USER || 'noreply@example.com';
 
 interface ContractDetails {
   companyName: string;
@@ -30,24 +32,25 @@ interface ContractDetails {
 }
 
 async function sendEmail(to: string, subject: string, html: string, attachments?: { filename: string; content: Buffer }[]) {
-  // 1순위: Resend (프로덕션)
-  if (resend) {
-    const opts: any = {
-      from: `${FROM_NAME} <${RESEND_FROM}>`,
+  // 1순위: SendGrid (프로덕션)
+  if (SENDGRID_API_KEY) {
+    const msg: any = {
       to,
+      from: { name: FROM_NAME, email: FROM_EMAIL },
       subject,
       html,
     };
     if (attachments?.length) {
-      opts.attachments = attachments.map(a => ({
+      msg.attachments = attachments.map(a => ({
         filename: a.filename,
-        content: a.content,
+        content: a.content.toString('base64'),
+        type: 'application/pdf',
+        disposition: 'attachment',
       }));
     }
-    const { data, error } = await resend.emails.send(opts);
-    if (error) throw new Error(`Resend 발송 실패: ${error.message}`);
-    console.log('Resend 메일 발송 완료:', data?.id);
-    return { messageId: data?.id };
+    await sgMail.send(msg);
+    console.log('SendGrid 메일 발송 완료:', to);
+    return { messageId: 'sendgrid-' + Date.now() };
   }
 
   // 2순위: Gmail SMTP (로컬)
@@ -79,7 +82,7 @@ export async function sendSigningEmail(
   signingLink: string,
   details: ContractDetails
 ) {
-  if (!resend && !gmailTransporter) {
+  if (!SENDGRID_API_KEY && !gmailTransporter) {
     console.log('=== [테스트] 메일 발송 스킵 ===');
     console.log('수신자:', to);
     console.log('서명 링크:', signingLink);
@@ -131,7 +134,7 @@ export async function sendFinalPDF(
   pdfBuffer: Buffer,
   details: ContractDetails
 ) {
-  if (!resend && !gmailTransporter) {
+  if (!SENDGRID_API_KEY && !gmailTransporter) {
     console.log('=== [테스트] PDF 메일 발송 스킵 ===');
     console.log('입주자:', toTenant, '관리자:', toAdmin);
     console.log('PDF 크기:', pdfBuffer.length, 'bytes');

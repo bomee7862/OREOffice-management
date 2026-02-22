@@ -32,6 +32,12 @@ export default function SignatureCanvas({ onSave, readOnly, existingSignature }:
     }
   };
 
+  const handleDrawEnd = () => {
+    if (sigPadRef.current && !sigPadRef.current.isEmpty()) {
+      setIsEmpty(false);
+    }
+  };
+
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -85,7 +91,8 @@ export default function SignatureCanvas({ onSave, readOnly, existingSignature }:
               className: 'w-full',
               style: { width: '100%', height: '160px' },
             }}
-            onEnd={() => setIsEmpty(false)}
+            onBegin={() => setIsEmpty(false)}
+            onEnd={handleDrawEnd}
           />
         </div>
       ) : (

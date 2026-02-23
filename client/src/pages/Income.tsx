@@ -819,7 +819,7 @@ export default function Income() {
                           {!billing.tax_invoice_issued && (
                             <button
                               onClick={() => openTaxInvoiceModal(billing)}
-                              className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
+                              className="p-1.5 hover:bg-indigo-100 rounded-lg text-indigo-600"
                               title="세금계산서 발행"
                             >
                               <FileText className="w-4 h-4" />
@@ -909,14 +909,14 @@ export default function Income() {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
-                    <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
                   ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
-                      className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
+                      className="p-1.5 hover:bg-indigo-100 rounded-lg text-indigo-600"
                       title="세금계산서 발행"
                     >
                       <FileText className="w-4 h-4" />
@@ -978,14 +978,14 @@ export default function Income() {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
-                    <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
                   ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
-                      className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
+                      className="p-1.5 hover:bg-indigo-100 rounded-lg text-indigo-600"
                       title="세금계산서 발행"
                     >
                       <FileText className="w-4 h-4" />
@@ -1047,14 +1047,14 @@ export default function Income() {
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-slate-900">{formatCurrency(transaction.amount)}</span>
                   {transaction.tax_invoice_issued ? (
-                    <span className="inline-flex items-center px-2 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-medium">
+                    <span className="inline-flex items-center px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                       <FileText className="w-3 h-3 mr-1" />
                       세금계산서
                     </span>
                   ) : isAdmin ? (
                     <button
                       onClick={() => openTransactionTaxModal(transaction)}
-                      className="p-1.5 hover:bg-purple-100 rounded-lg text-purple-600"
+                      className="p-1.5 hover:bg-indigo-100 rounded-lg text-indigo-600"
                       title="세금계산서 발행"
                     >
                       <FileText className="w-4 h-4" />
@@ -1427,7 +1427,7 @@ export default function Income() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-600" />
+                <FileText className="w-5 h-5 text-indigo-600" />
                 세금계산서 발행
               </h3>
               <button onClick={() => setShowTaxInvoiceModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -1435,7 +1435,7 @@ export default function Income() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-purple-50 rounded-xl">
+              <div className="p-4 bg-indigo-50 rounded-xl">
                 <div className="text-sm text-slate-500">청구 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedBilling.room_number}호 | {selectedBilling.company_name}
@@ -1630,7 +1630,7 @@ export default function Income() {
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
             <div className="p-6 border-b border-slate-200 flex items-center justify-between">
               <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-purple-600" />
+                <FileText className="w-5 h-5 text-indigo-600" />
                 세금계산서 발행
               </h3>
               <button onClick={() => setShowTransactionTaxModal(false)} className="p-2 hover:bg-slate-100 rounded-lg">
@@ -1638,7 +1638,7 @@ export default function Income() {
               </button>
             </div>
             <div className="p-6 space-y-4">
-              <div className="p-4 bg-purple-50 rounded-xl">
+              <div className="p-4 bg-indigo-50 rounded-xl">
                 <div className="text-sm text-slate-500">거래 정보</div>
                 <div className="font-medium text-slate-900">
                   {selectedTransaction.room_number || '-'} | {selectedTransaction.company_name || '-'}
@@ -1916,19 +1916,19 @@ export default function Income() {
                 </select>
               </div>
 
-              <div className="p-4 bg-purple-50 rounded-xl space-y-3">
+              <div className="p-4 bg-indigo-50 rounded-xl space-y-3">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={depositConfirmForm.issue_tax_invoice}
                     onChange={(e) => setDepositConfirmForm(prev => ({ ...prev, issue_tax_invoice: e.target.checked }))}
-                    className="w-4 h-4 text-purple-600 rounded"
+                    className="w-4 h-4 text-indigo-600 rounded"
                   />
                   <span className="font-medium text-slate-700">📄 세금계산서 발행</span>
                 </label>
                 
                 {depositConfirmForm.issue_tax_invoice && (
-                  <div className="space-y-3 pt-2 border-t border-purple-200">
+                  <div className="space-y-3 pt-2 border-t border-indigo-200">
                     <div>
                       <label className="label text-slate-700">발행일</label>
                       <input
@@ -2026,7 +2026,7 @@ export default function Income() {
 
               {/* 세금계산서 정보 표시 (기존 발행 정보) */}
               {selectedDeposit.tax_invoice_issued && (
-                <div className="p-4 bg-purple-50 rounded-xl">
+                <div className="p-4 bg-indigo-50 rounded-xl">
                   <div className="flex items-center gap-2 text-slate-700 font-medium">
                     <FileText className="w-4 h-4" />
                     세금계산서 발행됨

@@ -52,7 +52,7 @@ router.get('/session/:id', async (req, res) => {
              COALESCE((s.contract_data->>'company_name'), t.company_name) as company_name,
              COALESCE((s.contract_data->>'representative_name'), t.representative_name) as representative_name,
              COALESCE((s.contract_data->>'room_number'), r.room_number) as room_number,
-             COALESCE((s.contract_data->>'room_type'), r.room_type) as room_type,
+             COALESCE((s.contract_data->>'room_type'), r.room_type::text) as room_type,
              COALESCE((s.contract_data->>'start_date'), c.start_date::text) as start_date,
              COALESCE((s.contract_data->>'end_date'), c.end_date::text) as end_date,
              COALESCE((s.contract_data->>'monthly_rent')::int, c.monthly_rent) as monthly_rent,

@@ -80,7 +80,7 @@ export default function Income() {
   const [deposits, setDeposits] = useState<Transaction[]>([]);
   const [pendingConversions, setPendingConversions] = useState<Transaction[]>([]);
   const [, setConfirmedDeposits] = useState<Transaction[]>([]);
-  const [, setAllActiveDeposits] = useState<Transaction[]>([]);
+  const [allActiveDeposits, setAllActiveDeposits] = useState<Transaction[]>([]);
   const [showDepositConfirmModal, setShowDepositConfirmModal] = useState(false);
   const [showConversionModal, setShowConversionModal] = useState(false);
   const [selectedDeposit, setSelectedDeposit] = useState<Transaction | null>(null);
@@ -1154,7 +1154,7 @@ export default function Income() {
       </div>
 
       {/* 🏦 예수금(보증금) 관리 */}
-      {(deposits.length > 0 || pendingConversions.length > 0) && (
+      {(deposits.length > 0 || pendingConversions.length > 0 || allActiveDeposits.length > 0) && (
         <div className="card">
           <div className="p-4 border-b border-slate-200 border-l-[3px] border-l-primary-400">
             <h3 className="font-semibold text-slate-900 flex items-center gap-2">
@@ -1200,6 +1200,44 @@ export default function Income() {
                           입금 확인
                         </button>
                       )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 보유 예수금 */}
+          {allActiveDeposits.length > 0 && (
+            <div className="p-4 border-b border-slate-100">
+              <h4 className="text-sm font-semibold text-slate-700 mb-3 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                보유 예수금 ({allActiveDeposits.length}건)
+                <span className="text-xs font-normal text-slate-500">
+                  합계: {formatCurrency(allActiveDeposits.reduce((sum, d) => sum + d.amount, 0))}
+                </span>
+              </h4>
+              <div className="space-y-2">
+                {allActiveDeposits.map((deposit) => (
+                  <div key={deposit.id} className="flex items-center justify-between p-3 rounded-xl border border-slate-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center">
+                        <Landmark className="w-5 h-5 text-emerald-600" />
+                      </div>
+                      <div>
+                        <div className="font-medium text-slate-900">
+                          {deposit.room_number}호 | {deposit.company_name}
+                        </div>
+                        <div className="text-sm text-slate-500">
+                          입금일: {deposit.transaction_date ? format(new Date(deposit.transaction_date), 'yy.MM.dd') : '-'}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className="font-bold text-slate-900">{formatCurrency(deposit.amount)}</span>
+                      <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
+                        입금완료
+                      </span>
                     </div>
                   </div>
                 ))}

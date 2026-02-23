@@ -15,6 +15,7 @@ import contractTemplateRoutes from './routes/contractTemplates';
 import contractSigningRoutes from './routes/contractSigning';
 import contractSigningPublicRoutes from './routes/contractSigningPublic';
 import { authenticate, AuthRequest } from './middleware/auth';
+import { query } from './db/connection';
 
 dotenv.config();
 
@@ -78,6 +79,20 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
-app.listen(PORT, HOST, () => {
-  console.log(`서버가 http://${HOST}:${PORT} 에서 실행중입니다.`);
+// DB 스키마 자동 마이그레이션 후 서버 시작
+const runMigrations = async () => {
+  try {
+    await query(`DO $$ BEGIN ALTER TABLE transactions ADD COLUMN tax_invoice_issued BOOLEAN DEFAULT false; EXCEPTION WHEN duplicate_column THEN null; END $$;`);
+    await query(`DO $$ BEGIN ALTER TABLE transactions ADD COLUMN tax_invoice_date DATE; EXCEPTION WHEN duplicate_column THEN null; END $$;`);
+    await query(`DO $$ BEGIN ALTER TABLE transactions ADD COLUMN tax_invoice_number VARCHAR(50); EXCEPTION WHEN duplicate_column THEN null; END $$;`);
+    console.log('DB 마이그레이션 확인 완료');
+  } catch (error) {
+    console.error('DB 마이그레이션 오류:', error);
+  }
+};
+
+runMigrations().then(() => {
+  app.listen(PORT, HOST, () => {
+    console.log(`서버가 http://${HOST}:${PORT} 에서 실행중입니다.`);
+  });
 });

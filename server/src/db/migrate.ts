@@ -579,6 +579,29 @@ const createTables = async () => {
       END $$;
     `);
 
+    // transactions에 세금계산서 컬럼 추가
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE transactions ADD COLUMN tax_invoice_issued BOOLEAN DEFAULT false;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE transactions ADD COLUMN tax_invoice_date DATE;
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+    await client.query(`
+      DO $$ BEGIN
+        ALTER TABLE transactions ADD COLUMN tax_invoice_number VARCHAR(50);
+      EXCEPTION
+        WHEN duplicate_column THEN null;
+      END $$;
+    `);
+
     // 인덱스 생성
     await client.query(`
       CREATE INDEX IF NOT EXISTS idx_contracts_room_id ON contracts(room_id);

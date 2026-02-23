@@ -372,9 +372,9 @@ router.post('/:id/confirm-deposit', async (req, res) => {
     ]);
     
     res.json(result.rows[0]);
-  } catch (error) {
+  } catch (error: any) {
     console.error('보증금 입금 확인 오류:', error);
-    res.status(500).json({ error: '보증금 입금 확인에 실패했습니다.' });
+    res.status(500).json({ error: '보증금 입금 확인에 실패했습니다.', detail: error?.message });
   }
 });
 

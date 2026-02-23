@@ -352,9 +352,10 @@ export default function Income() {
       setSelectedDeposit(null);
       loadData();
       showSuccess('보증금 입금이 확인되었습니다.');
-    } catch (error) {
+    } catch (error: any) {
       console.error('보증금 입금 확인 오류:', error);
-      showError('보증금 입금 확인에 실패했습니다.');
+      const detail = error?.response?.data?.detail;
+      showError(detail ? `보증금 입금 확인 실패: ${detail}` : '보증금 입금 확인에 실패했습니다.');
     }
   };
 
